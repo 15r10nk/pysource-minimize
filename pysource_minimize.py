@@ -1,27 +1,18 @@
-import multiprocessing
-import pathlib
-import hashlib
-import json
-import linecache
 import os
 import sys
 
 
-from multiprocessing import Pool
-from random import shuffle
 import traceback
-import tempfile
 import contextlib
 
 import asttokens
+import asttokens.util
 import ast
 from rich import print as rprint
 import rich
 
 import rich.syntax
 from rich.console import Console
-from rich.table import Table, Column
-from rich.highlighter import ReprHighlighter
 import token
 
 
@@ -90,6 +81,8 @@ class Minimizer:
             elif isinstance(source_range, (list, tuple)):
                 start = source_range[0]
                 end = source_range[-1]
+            else:
+                raise TypeError
 
             start = start_offset(start)
             end = end_offset(end)
@@ -135,6 +128,9 @@ class Minimizer:
             else:
                 positions = self.get_indents(indent_node)
 
+            positions=[(a,b) for a,b in positions if not any( l<=a and b<=r for l,r,_ in replacements )  ]
+
+
             new_replacements += [
                 (*position, self.get_indent_text(indenting)) for position in positions
             ]
@@ -142,8 +138,24 @@ class Minimizer:
         new_replacements.sort()
 
         for a, b in zip(new_replacements, new_replacements[1:]):
-            assert a[1] <= b[0]
-            pass
+
+            if a[1] > b[0]:
+                console = Console()
+                line_numbers=asttokens.LineNumbers(self.original_source)
+
+                end=line_numbers.offset_to_line(a[1])
+                start=line_numbers.offset_to_line(b[0])
+                a_start=line_numbers.offset_to_line(a[0])
+                b_end=line_numbers.offset_to_line(b[1])
+
+                print(start,end)
+                syntax=rich.syntax.Syntax(self.original_source, "python", line_numbers=True,line_range=(a_start[0],b_end[0]))
+                syntax.stylize_range("on red",start,end)
+                syntax.stylize_range("on blue",a_start,start)
+                syntax.stylize_range("on blue",end,b_end)
+                console.print(syntax)
+                traceback.print_stack()
+                sys.exit(1)
 
         def new_code(replacements):
             lines = asttokens.util.replace(
@@ -307,9 +319,9 @@ class Minimizer:
             if self.test_without((exprs[0], extend_comma(exprs[-1])[1])):
                 return
 
-            mid = len(stmts) // 2
-            first = stmts[:mid]
-            last = stmts[mid:]
+            mid = len(exprs) // 2
+            first = exprs[:mid]
+            last = exprs[mid:]
 
             binary_remove(first)
             binary_remove(last)
@@ -358,12 +370,39 @@ class Minimizer:
                 self.minimize_expr(node.test)
                 self.minimize_stmts(node.body)
                 self.minimize_stmts(node.orelse)
+        elif isinstance(node, ast.Assign):
+            self.try_only_expr(node,node.value)
+
         elif isinstance(node, ast.Try):
-            self.minimize_stmts(node.body)
             if self.try_only_stmts(node, node.body):
+                self.minimize_stmts(node.body)
                 return
             for handler in node.handlers:
-                self.try_only_stmts(node, node.body):
+                if self.try_only_stmts(node, handler.body):
+                    self.minimize_stmts(handler.body)
+                    return
+
+            for handler in node.handlers:
+                if self.try_only_expr(node, handler.type):
+                    return 
+
+            self.minimize_stmts(node.body)
+            for handler in node.handlers:
+                self.minimize_stmts(handler.body)
+                self.minimize_expr(handler.type)
+
+        elif isinstance(node, ast.For):
+            if self.try_only_stmts(node,node.body):
+                self.minimize_stmts(node.body)
+                return 
+
+            if self.try_only_stmts(node,node.orelse):
+                self.minimize_stmts(node.orelse)
+                return 
+
+            self.minimize_expr(node.iter)
+            self.minimize_stmts(node.orelse)
+            self.minimize_stmts(node.body)
 
 
         elif isinstance(node, ast.Expr):
