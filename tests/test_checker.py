@@ -1,34 +1,49 @@
-import pytest
-from pysource_minimize import minimize
 import ast
 import pathlib
+from collections import Counter
+
+import pytest
+
+from pysource_minimize import minimize
+
+
+def files():
+    base_dir = pathlib.Path(__file__).parent.parent.parent / "executing"
+    return base_dir.rglob("*.py")
 
 
 def gen_params():
-    filename = pathlib.Path("./pysource_minimize.py")
+    for filename in files():
 
-    tree=ast.parse(filename.read_text())
-    names=sorted({node.id for node in ast.walk(tree) if isinstance(node,ast.Name)})
-    return [(filename,name) for name in names]
-    
+        text = filename.read_text()
+        try:
+            tree = ast.parse(text)
+        except:
+            pass
+        c = Counter(node.id for node in ast.walk(tree) if isinstance(node, ast.Name))
 
-@pytest.mark.parametrize("filename,name",gen_params())
-def test_file(filename,name):
+        for name, nums in sorted(c.items())[:10]:
+            yield pytest.param(
+                filename, name, nums, id=f"{filename.stem}: {name} {nums}"
+            )
+
+
+@pytest.mark.parametrize("filename,name,num", gen_params())
+def test_file(filename, name, num):
+    print("search for:", name, num)
     filename = pathlib.Path(filename)
 
-    tree=ast.parse(filename.read_text())
+    tree = ast.parse(filename.read_text())
 
+    def count(source):
+        return sum(
+            isinstance(node, ast.Name) and node.id == name
+            for node in ast.walk(ast.parse(source))
+        )
 
     def checker(source):
-        return any( isinstance(node,ast.Name) and node.id==name for node in ast.walk(ast.parse(source)))
+        return count(source) >= num
 
-    new_source=minimize(filename.read_text(),checker)
+    new_source = minimize(filename.read_text(), checker)
 
-    assert new_source==name
-
-
-    
-
-
-
-
+    assert count(new_source) == num

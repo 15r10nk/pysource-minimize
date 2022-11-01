@@ -1,19 +1,13 @@
-import os
-import sys
-
-
-import traceback
-import contextlib
-
-import asttokens
-import asttokens.util
 import ast
-from rich import print as rprint
-import rich
+import contextlib
+import copy
+import os
 
-import rich.syntax
 from rich.console import Console
-import token
+
+
+class ExtAst(ast.AST):
+    __index: int
 
 
 @contextlib.contextmanager
@@ -24,28 +18,12 @@ def no_output():
                 yield
 
 
-def start_offset(thing):
-    if isinstance(thing, ast.AST):
-        return thing.first_token.startpos
-
-    if isinstance(thing, asttokens.util.Token):
-        return thing.startpos
-
-    assert isinstance(thing, int)
-
-    return thing
-
-
-def end_offset(thing):
-    if isinstance(thing, ast.AST):
-        return thing.last_token.endpos
-
-    if isinstance(thing, asttokens.util.Token):
-        return thing.endpos
-
-    assert isinstance(thing, int)
-
-    return thing
+def is_block(nodes):
+    return (
+        isinstance(nodes, list)
+        and nodes
+        and all(isinstance(n, ast.stmt) for n in nodes)
+    )
 
 
 class Minimizer:
@@ -54,364 +32,424 @@ class Minimizer:
         self.checker = checker
 
         self.original_source = source
-        self.source = source
+        self.original_ast = ast.parse(source)
+        for i, node in enumerate(ast.walk(self.original_ast)):
+            node.__index = i
 
-        self.atok = asttokens.ASTTokens(self.original_source, parse=True)
+        self.replaced = {}
 
-        self.replacements = []
-        self.indent_map = {}
-        self.removed = set()
+        self.minimize_stmt(self.original_ast)
 
-        self.minimize_stmt(self.atok.tree)
+        self.source = self.get_source(self.replaced)
+        print(self.source)
+        print(ast.dump(self.get_ast(self.original_ast), indent=4))
+
         console = Console()
 
-        console.print("minimized:")
-        console.print(rich.syntax.Syntax(self.source, "python", line_numbers=True))
+    def get_ast(self, node, replaced={}):
+        replaced = self.replaced | replaced
 
-    def test_with(self, *subs) -> bool:
-        "returns True if removal was successful and the bug still exists"
+        tmp_ast = copy.deepcopy(node)
+        node_map = {n.__index: n for n in ast.walk(tmp_ast)}
 
-        new_replacements = []
+        def replaced_node(node):
+            if not isinstance(node, ast.AST):
+                return node
+            i = node.__index
+            while i in replaced:
+                i = replaced[i]
+                assert isinstance(i, int), (node, i)
+            return node_map[i]
 
-        for source_range, replacement in subs:
+        def replaced_nodes(nodes):
+            def replace(l):
+                for i in l:
+                    if i not in replaced:
+                        yield i
+                    else:
+                        i = replaced[i]
+                        if isinstance(i, int):
+                            yield from replace([i])
+                        elif isinstance(i, list):
+                            yield from replace(i)
+                        else:
+                            raise TypeError(type(i))
 
-            if isinstance(source_range, ast.AST):
-                start = end = source_range
+            if not all(isinstance(n, ast.AST) for n in nodes):
+                return nodes
 
-            elif isinstance(source_range, (list, tuple)):
-                start = source_range[0]
-                end = source_range[-1]
-            else:
-                raise TypeError
+            block = is_block(nodes)
 
-            start = start_offset(start)
-            end = end_offset(end)
+            l = list(replace([n.__index for n in nodes]))
 
-            new_replacements.append((start, end, replacement))
+            if not l and block:
+                return [ast.Pass()]
 
-        return self.test_code(new_replacements)
+            result = [node_map[i] for i in l]
+            if block:
+                result = [ast.Expr(r) if isinstance(r, ast.expr) else r for r in result]
 
-    def test_code(self, replacements=[], indent_map={}, removed=set()):
+            return result
 
-        replacements = [*self.replacements, *replacements]
-        removed = {*self.removed, *removed}
+        def map_node(node):
+            for name, value in ast.iter_fields(node):
+                if isinstance(value, list):
+                    setattr(node, name, replaced_nodes(value))
+                else:
+                    setattr(node, name, replaced_node(value))
+            for child in ast.iter_child_nodes(node):
+                map_node(child)
 
-        new_replacements = list(replacements)
+        map_node(tmp_ast)
 
-        indent_map = self.indent_map | indent_map
+        return tmp_ast
 
-        for indent_node in indent_map:
+    def get_source(self, replaced):
+        tree = self.get_ast(self.original_ast, replaced)
+        ast.fix_missing_locations(tree)
+        return ast.unparse(tree)
 
-            if indent_node in removed:
-                continue
+    def try_with(self, replaced={}):
 
-            indenting = indent_node
-            while indenting in indent_map:
-                indenting = indent_map[indenting]
-
-            if isinstance(indent_node,ast.FunctionDef):
-                def is_decorator(t):
-                    return t.type == token.OP and t.string == "@"
-
-                positions = self.get_indents(indent_node)
-                if is_decorator(indent_node.first_token):
-                    print("indent decorator")
-                    positions = []
-                    t = indent_node.first_token
-
-                    while True:
-                        positions.append(self.get_indent(t))
-                        if not is_decorator(t):
-                            assert t.string in ("def", "class"), t
-                            break
-                        t = self.atok.get_token(t.start[0] + 1, t.start[1])
-            else:
-                positions = self.get_indents(indent_node)
-
-            positions=[(a,b) for a,b in positions if not any( l<=a and b<=r for l,r,_ in replacements )  ]
-
-
-            new_replacements += [
-                (*position, self.get_indent_text(indenting)) for position in positions
-            ]
-
-        new_replacements.sort()
-
-        for a, b in zip(new_replacements, new_replacements[1:]):
-
-            if a[1] > b[0]:
-                console = Console()
-                line_numbers=asttokens.LineNumbers(self.original_source)
-
-                end=line_numbers.offset_to_line(a[1])
-                start=line_numbers.offset_to_line(b[0])
-                a_start=line_numbers.offset_to_line(a[0])
-                b_end=line_numbers.offset_to_line(b[1])
-
-                print(start,end)
-                syntax=rich.syntax.Syntax(self.original_source, "python", line_numbers=True,line_range=(a_start[0],b_end[0]))
-                syntax.stylize_range("on red",start,end)
-                syntax.stylize_range("on blue",a_start,start)
-                syntax.stylize_range("on blue",end,b_end)
-                console.print(syntax)
-                traceback.print_stack()
-                sys.exit(1)
-
-        def new_code(replacements):
-            lines = asttokens.util.replace(
-                self.original_source, replacements
-            ).splitlines()
-            return "\n".join(l for l in lines if l.strip())
-
-        old_source = self.source
-        new_source = new_code(new_replacements)
-
-        self.source = new_source
-
+        source = self.get_source(replaced)
         try:
-            with no_output():
-                compile(self.source, "<source>", "exec")
-        except SyntaxError as e:
-            console = Console()
+            compile(source, "<filename>", "exec")
+        except Exception as e:
+            print(source)
+            print(ast.dump(self.get_ast(self.original_ast, replaced), indent=4))
+            # return False
+            print("ex", dir(e))
+            raise
 
-            console.print("without modification:")
-            console.print(rich.syntax.Syntax(old_source, "python", line_numbers=True))
+        if self.checker(source):
+            # print()
+            # print("replaced", replaced)
+            # print("source:")
+            # print(source)
 
-            console.print("with modification:")
-            console.print(rich.syntax.Syntax(new_source, "python", line_numbers=True))
-            rprint("error", e)
-            traceback.print_stack()
-            sys.exit(1)
-
-        bug_exists = self.checker(self.source)
-
-        if not bug_exists:
-            self.source = old_source
-        else:
-
-            self.replacements = replacements
-            self.indent_map = indent_map
-
-        return bug_exists
-
-    def test_without(self, source_range) -> bool:
-
-        return self.test_with((source_range, ""))
-
-    def get_indent(self, node):
-        "returns source_range"
-        if isinstance(node, ast.AST):
-            first = node.first_token
-        else:
-            first = node
-        before = self.atok.prev_token(first, include_extra=True)
-
-        while before.type not in (token.NEWLINE, token.NL):
-            before = self.atok.prev_token(before, include_extra=True)
-
-        return (end_offset(before), start_offset(first))
-
-
-    def get_indents(self,node):
-        if isinstance(node,ast.Try):
-            tokens=[node,*node.handlers]
-            return [self.get_indent(token) for token in tokens]
-        else:
-            return [self.get_indent(node)]
-
-    def get_indent_text(self, node):
-        start, end = self.get_indent(node)
-        result = self.original_source[start:end]
-
-        assert all(c in "\t " for c in result), repr(result)
-
-        return result
-
-    def try_only_stmts(self, outer_node, inner_stmts):
-
-        new_map = {stmt: outer_node for stmt in inner_stmts}
-
-        inner_start = self.get_indent(inner_stmts[0])[0]
-
-        removed = [
-            (start_offset(outer_node), inner_start, "\n"),
-            (end_offset(inner_stmts[-1]), end_offset(outer_node), ""),
-        ]
-        return self.test_code(removed, new_map)
-
-    def try_only_expr(self, outer_node, inner_node):
-        if self.test_with(
-            ((start_offset(outer_node), start_offset(inner_node)), ""),
-            ((end_offset(inner_node), end_offset(outer_node)), ""),
-        ):
-            self.minimize_expr(inner_node)
+            self.replaced = self.replaced | replaced
             return True
 
         return False
 
-    def node_range(self, first_node, last_node):
-        return (first_node.first_token.startpos, last_node.last_token.endpos)
+    def try_without(self, nodes):
+        return self.try_with({n.__index: [] for n in nodes})
 
-    def minimize_stmts(self, stmts):
-        if not stmts:
-            return
+    def try_only(self, node: ExtAst, child) -> bool:
+        if isinstance(child, list):
+            return self.try_with({node.__index: [c.__index for c in child]})
+        else:
+            return self.try_with({node.__index: child.__index})
 
-        if self.test_with((stmts[0], "pass"), *[(stmt, "") for stmt in stmts[1:]]):
-            return
-        to_remove = len(stmts)
+    def minimize_comprehension(self, comp):
+        self.minimize_expr(comp.iter)
+        for if_ in comp.ifs:
+            self.minimize_expr(if_)
 
-        def try_remove(stmts):
-            nonlocal to_remove
-            # do not try to remove everything because this would produce invalid code
-            if len(stmts) < to_remove:
-                if self.test_with(*[(stmt, "") for stmt in stmts]):
-                    self.removed |= set(stmts)
-                    to_remove -= len(stmts)
-                    return True
+    def try_only_minimize(self, node, *childs):
+        childs = [child for child in childs if child is not None]
 
-        def binary_remove(stmts):
-            if len(stmts) == 0:
+        for child in childs:
+            if self.try_only(node, child):
+                self.minimize(child)
+                return True
+
+        for child in childs:
+            self.minimize(child)
+        return False
+
+    def minimize(self, o):
+        if isinstance(o, ast.expr):
+            return self.minimize_expr(o)
+        elif isinstance(o, ast.stmt):
+            return self.minimize_stmt(o)
+        elif isinstance(o, list):
+            return self.minimize_list(o, self.minimize)
+        else:
+            raise TypeError(type(o))
+
+    def minimize_expr(self, node):
+        if isinstance(node, ast.BoolOp):
+            self.minimize_list(node.values, self.minimize_expr, 1)
+        elif isinstance(node, ast.Compare):
+            self.try_only_minimize(node, node.left, *node.comparators)
+        elif isinstance(node, ast.Subscript):
+            if not self.try_only_minimize(node, node.value):
+                self.minimize_expr(node.slice)
+                # todo minimize slice to
+
+        elif isinstance(node, ast.FormattedValue):
+            self.minimize_expr(node.value)
+
+        elif isinstance(node, ast.JoinedStr):
+            self.minimize(node.values)
+            # todo minimize values
+
+        elif isinstance(node, ast.Slice):
+            self.try_only_minimize(node, node.lower, node.upper, node.step)
+        elif isinstance(node, ast.Lambda):
+            self.try_only_minimize(node.body)
+        elif isinstance(node, ast.UnaryOp):
+            self.try_only_minimize(node, node.operand)
+        elif isinstance(node, ast.BinOp):
+            self.try_only_minimize(node, node.left, node.right)
+        elif isinstance(node, ast.Attribute):
+            self.try_only_minimize(node, node.value)
+        elif isinstance(node, ast.IfExp):
+            self.try_only_minimize(node, node.test, node.body, node.orelse)
+        elif isinstance(node, ast.Yield):
+            self.try_only_minimize(node, node.value)
+        elif isinstance(node, ast.YieldFrom):
+            self.try_only_minimize(node, node.value)
+        elif isinstance(node, ast.Dict):
+            self.try_only_minimize(node, *node.keys, *node.values)
+            # todo: minimize list
+        elif isinstance(node, (ast.List, ast.Tuple, ast.Set)):
+            self.minimize(node.elts)
+        elif isinstance(node, ast.Name):
+            pass
+        elif isinstance(node, ast.Constant):
+            pass
+        elif isinstance(node, ast.Starred):
+            self.try_only_minimize(node, node.value)
+        elif isinstance(node, ast.Call):
+            if self.try_only_minimize(
+                node,
+                node.func,
+                *[kw.value for kw in node.keywords],
+                *[
+                    arg.value if isinstance(arg, ast.Starred) else arg
+                    for arg in node.args
+                ]
+            ):
                 return
 
-            if len(stmts) == 1:
-                if not try_remove(stmts):
-                    self.minimize_stmt(stmts[0])
+            not_stared = [arg for arg in node.args if not isinstance(arg, ast.Starred)]
+            for arg in not_stared:
+                if self.try_only(node, arg):
+                    self.minimize(arg)
+                    break
+            else:
+                self.minimize(node.args)
+
+        elif isinstance(
+            node, (ast.ListComp, ast.SetComp, ast.GeneratorExp, ast.DictComp)
+        ):
+            for gen in node.generators:
+                if self.try_only(node, gen.iter):
+                    self.minimize_expr(gen.iter)
                     return
 
-            mid = len(stmts) // 2
-            first = stmts[:mid]
-            last = stmts[mid:]
+            if isinstance(node, ast.DictComp):
+                if self.try_only(node, node.key):
+                    self.minimize_expr(node.key)
+                    return
 
-            if not try_remove(first):
-                binary_remove(first)
+                if self.try_only(node, node.value):
+                    self.minimize_expr(node.value)
+                    return
 
-            if not try_remove(last):
-                binary_remove(last)
+                self.minimize_expr(node.key)
+                self.minimize_expr(node.value)
+            else:
+                if self.try_only(node, node.elt):
+                    self.minimize_expr(node.elt)
+                    return
 
-        if len(stmts) > 1:
-            binary_remove(stmts)
+                self.minimize_expr(node.elt)
+            self.minimize_list(node.generators, self.minimize_comprehension, 1)
 
-    def minimize_list(self, exprs):
-        def extend_comma(node):
-            first = node.first_token
-            last = node.last_token
-
-            while True:
-                next_token = self.atok.next_token(last)
-                if next_token.type == token.OP and next_token.string in ")}]":
-                    break
-
-                last = next_token
-                if last.type == token.OP and last.string == ",":
-                    break
-
-            return (first, last.endpos)
-
-        def binary_remove(exprs):
-            "returns true if the expressions could be removed"
-            if len(exprs) == 0:
-                return
-            if len(exprs) == 1:
-                if not self.test_without(extend_comma(exprs[0])):
-                    self.minimize_stmt(exprs[0])
-                return
-
-            if self.test_without((exprs[0], extend_comma(exprs[-1])[1])):
-                return
-
-            mid = len(exprs) // 2
-            first = exprs[:mid]
-            last = exprs[mid:]
-
-            binary_remove(first)
-            binary_remove(last)
-
-        binary_remove(exprs)
-
-    def minimize_expr(self, expr):
-        if self.test_with((expr, "a")):  # replace it just with some name
-            return
-
-        if isinstance(expr, ast.Call):
-            self.minimize_expr(expr.func)
-            if not self.test_without((expr.func.last_token.endpos, expr)):
-                self.minimize_list(expr.args + expr.keywords)
-
-        elif isinstance(expr, ast.Attribute):
-            self.minimize_expr(expr.value)
-            self.test_without((expr.value.last_token.endpos, expr))
-        elif isinstance(expr, ast.Name):
-            pass
         else:
-            assert False, ("unsupported expr", expr)
-            print("unsupported expr", expr)
+            raise TypeError(node)  # Expr
+
+            for e in ast.iter_child_nodes(node):
+                if self.try_only(node, e):
+                    self.minimize_expr(e)
+                    return
+
+            for e in ast.iter_child_nodes(node):
+                self.minimize_expr(e)
+
+    def minimize_except_handler(self, handler):
+        self.minimize_list(handler.body, self.minimize_stmt)
+        if handler.type is not None:
+            self.minimize_expr(handler.type)
 
     def minimize_stmt(self, node):
-        if isinstance(node, ast.Module):
-            self.minimize_stmts(node.body)
-        elif isinstance(node, ast.ClassDef):
-            self.try_only_stmts(node, node.body)
-            self.minimize_stmts(node.body)
-
-        elif isinstance(node, ast.FunctionDef):
-
-            for decorator in node.decorator_list:
-                if self.try_only_expr(node, decorator):
-                    return
-            self.minimize_stmts(node.body)
-
-            self.try_only_stmts(node, node.body)
-        elif isinstance(node, ast.If):
-            if self.try_only_stmts(node, node.body):
-                self.minimize_stmts(node.body)
-            elif node.orelse and self.try_only_stmts(node, node.orelse):
-                self.minimize_stmts(node.orelse)
-            else:
-                self.minimize_expr(node.test)
-                self.minimize_stmts(node.body)
-                self.minimize_stmts(node.orelse)
-        elif isinstance(node, ast.Assign):
-            self.try_only_expr(node,node.value)
-
-        elif isinstance(node, ast.Try):
-            if self.try_only_stmts(node, node.body):
-                self.minimize_stmts(node.body)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if self.try_only_minimize(node, node.decorator_list):
                 return
-            for handler in node.handlers:
-                if self.try_only_stmts(node, handler.body):
-                    self.minimize_stmts(handler.body)
+
+            self.minimize_list(node.body, self.minimize_stmt)
+            body = self.get_ast(node)
+
+            if not any(isinstance(n, ast.Return) for n in ast.walk(body)):
+                if self.try_only(node, node.body):
                     return
 
-            for handler in node.handlers:
-                if self.try_only_expr(node, handler.type):
-                    return 
+            nargs = node.args
+            args = nargs.posonlyargs + nargs.args + nargs.kwonlyargs
 
-            self.minimize_stmts(node.body)
-            for handler in node.handlers:
-                self.minimize_stmts(handler.body)
-                self.minimize_expr(handler.type)
+            if nargs.vararg:
+                args.append(nargs.vararg)
 
-        elif isinstance(node, ast.For):
-            if self.try_only_stmts(node,node.body):
-                self.minimize_stmts(node.body)
-                return 
+            if nargs.kwarg:
+                args.append(nargs.kwarg)
 
-            if self.try_only_stmts(node,node.orelse):
-                self.minimize_stmts(node.orelse)
-                return 
+            self.try_only_minimize(
+                node, *[arg.annotation for arg in args if arg.annotation]
+            )
+        elif isinstance(node, ast.ClassDef):
+            if self.try_only_minimize(node, node.decorator_list):
+                return
 
-            self.minimize_expr(node.iter)
-            self.minimize_stmts(node.orelse)
-            self.minimize_stmts(node.body)
+            if self.try_only_minimize(node, node.body):
+                return
 
+            self.minimize(node.bases)
+
+        elif isinstance(node, ast.Return):
+            self.try_only_minimize(node, node.value)
+
+        elif isinstance(node, ast.Delete):
+            self.try_only_minimize(node, *node.targets)
+
+        elif isinstance(node, ast.Assign):
+            self.try_only_minimize(node, node.value)
+            # todo minimize targets
+
+        elif isinstance(node, ast.AugAssign):
+            self.try_only_minimize(node, node.value)
+            # todo minimize target
+
+        elif isinstance(node, ast.AnnAssign):
+            self.try_only_minimize(node, node.value)
+            # todo minimize target
+
+        elif isinstance(node, (ast.For, ast.AsyncFor)):
+            self.minimize_list(node.body, self.minimize_stmt)
+            body = self.get_ast(node)
+            if not any(
+                isinstance(n, (ast.Break, ast.Continue)) for n in ast.walk(body)
+            ):
+                if self.try_only(node, node.body):
+                    return
+
+            self.try_only_minimize(node, node.iter, node.orelse)
+
+        elif isinstance(node, ast.While):
+            self.minimize_list(node.body, self.minimize_stmt)
+            body = self.get_ast(node)
+            if not any(
+                isinstance(n, (ast.Break, ast.Continue)) for n in ast.walk(body)
+            ):
+                if self.try_only(node, node.body):
+                    return
+
+            self.try_only_minimize(node, node.test, node.orelse)
+
+        elif isinstance(node, ast.If):
+            self.try_only_minimize(node, node.test, node.body, node.orelse)
+
+        elif isinstance(node, (ast.With, ast.AsyncWith)):
+            self.minimize_list(node.body, self.minimize_stmt)
+            if self.try_only_minimize(node, *[ctx.context_expr for ctx in node.items]):
+                return
+            self.minimize_list(node.items, lambda e: None, minimal=1)
+
+        # todo Match
+
+        elif isinstance(node, ast.Raise):
+            self.try_only_minimize(node, node.exc, node.cause)
+
+        elif isinstance(node, (ast.Try, ast.TryStar)):
+            if self.try_only(node, node.body):
+                self.minimize(node.body)
+                return
+            if node.orelse and self.try_only(node, node.orelse):
+                self.minimize(node.orelse)
+                return
+            if node.finalbody and self.try_only_minimize(node, node.finalbody):
+                self.minimize(node.finalbody)
+                return
+
+            if self.try_only_minimize(node, *[h.body for h in node.handlers]):
+                return
+            if self.try_only_minimize(node, *[h.type for h in node.handlers]):
+                return
+
+            self.minimize_list(
+                node.handlers, self.minimize_except_handler, 0 if node.finalbody else 1
+            )
+        elif isinstance(node, ast.Assert):
+            self.try_only_minimize(node, node.test, node.msg)
+
+        # Global
+        # Nonlocal
 
         elif isinstance(node, ast.Expr):
             self.minimize_expr(node.value)
-        elif isinstance(node, ast.Return):
-            self.try_only_expr(node, node.value)
+
+        elif isinstance(node, ast.Module):
+            self.minimize(node.body)
         else:
-            assert False, ("unsupported stmt", node)
-            print("unsupported", node)
+
+            raise TypeError(node)  # Stmt
+
+            for name, value in ast.iter_fields(node):
+                if isinstance(node, ast.Module):
+                    continue
+
+                if is_block(value):
+                    if self.try_only(node, value):
+                        self.minimize_list(value, self.minimize_stmt)
+                        return
+                elif isinstance(value, ast.expr):
+                    if self.try_only(node, value):
+                        self.minimize_expr(value)
+                        return
+
+            for name, value in ast.iter_fields(node):
+                if is_block(value):
+                    self.minimize_list(value, self.minimize_stmt)
+                elif isinstance(value, ast.expr):
+                    self.minimize_expr(value)
+
+    def minimize_list(self, stmts, terminal, minimal=0):
+        max_remove = len(stmts) - minimal
+
+        def wo(l):
+            nonlocal max_remove
+
+            if max_remove < len(l):
+                devide(l)
+            else:
+                if self.try_without(l):
+                    max_remove -= len(l)
+                else:
+                    devide(l)
+
+        def devide(l):
+            nonlocal max_remove
+            if not l:
+                return
+
+            if len(l) == 1:
+                if max_remove >= 1:
+                    if self.try_without(l):
+                        max_remove -= 1
+                    else:
+                        terminal(l[0])
+                else:
+                    terminal(l[0])
+            else:
+
+                mid = len(l) // 2
+
+                wo(l[mid:])
+                wo(l[:mid])
+
+        devide(stmts)
 
 
 def minimize(source, checker):
