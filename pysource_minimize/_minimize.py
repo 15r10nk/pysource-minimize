@@ -6,10 +6,6 @@ import os
 from rich.console import Console
 
 
-class ExtAst(ast.AST):
-    __index: int
-
-
 @contextlib.contextmanager
 def no_output():
     with open(os.devnull, "w") as f:
@@ -58,7 +54,9 @@ class Minimizer:
             i = node.__index
             while i in replaced:
                 i = replaced[i]
-                assert isinstance(i, int), (node, i)
+                assert isinstance(i, (int, type(None))), (node, i)
+            if i is None:
+                return None
             return node_map[i]
 
         def replaced_nodes(nodes):
@@ -117,8 +115,9 @@ class Minimizer:
         except Exception as e:
             print(source)
             print(ast.dump(self.get_ast(self.original_ast, replaced), indent=4))
-            # return False
             print("ex", dir(e))
+            if "assigned to before global declaration" in str(e):
+                return False  # todo parse ... compile
             raise
 
         if self.checker(source):
@@ -135,7 +134,11 @@ class Minimizer:
     def try_without(self, nodes):
         return self.try_with({n.__index: [] for n in nodes})
 
-    def try_only(self, node: ExtAst, child) -> bool:
+    def try_none(self, node):
+        if node is not None:
+            return self.try_with({node.__index: None})
+
+    def try_only(self, node, child) -> bool:
         if isinstance(child, list):
             return self.try_with({node.__index: [c.__index for c in child]})
         else:
@@ -283,22 +286,31 @@ class Minimizer:
             self.minimize_list(node.body, self.minimize_stmt)
             body = self.get_ast(node)
 
-            if not any(isinstance(n, ast.Return) for n in ast.walk(body)):
+            if not any(
+                isinstance(
+                    n,
+                    (
+                        ast.Return,
+                        ast.Yield,
+                        ast.YieldFrom,
+                        ast.Await,
+                        ast.AsyncFor,
+                        ast.AsyncWith,
+                    ),
+                )
+                for n in ast.walk(body)
+            ):
                 if self.try_only(node, node.body):
                     return
 
             nargs = node.args
-            args = nargs.posonlyargs + nargs.args + nargs.kwonlyargs
 
-            if nargs.vararg:
-                args.append(nargs.vararg)
+            self.minimize_list(nargs.posonlyargs, lambda e: None)
+            self.minimize_list(nargs.args, lambda e: None)
+            self.minimize_list(nargs.kwonlyargs, lambda e: None)
+            self.try_none(nargs.vararg)
+            self.try_none(nargs.kwarg)
 
-            if nargs.kwarg:
-                args.append(nargs.kwarg)
-
-            self.try_only_minimize(
-                node, *[arg.annotation for arg in args if arg.annotation]
-            )
         elif isinstance(node, ast.ClassDef):
             if self.try_only_minimize(node, node.decorator_list):
                 return
@@ -357,7 +369,8 @@ class Minimizer:
                 return
             self.minimize_list(node.items, lambda e: None, minimal=1)
 
-        # todo Match
+        elif isinstance(node, ast.Match):
+            pass  # todo Match
 
         elif isinstance(node, ast.Raise):
             self.try_only_minimize(node, node.exc, node.cause)
@@ -384,8 +397,14 @@ class Minimizer:
         elif isinstance(node, ast.Assert):
             self.try_only_minimize(node, node.test, node.msg)
 
-        # Global
-        # Nonlocal
+        elif isinstance(node, (ast.Import, ast.ImportFrom)):
+
+            self.minimize_list(node.names, lambda e: None, 1)
+
+        elif isinstance(node, (ast.Global)):
+            pass  # TODO
+        elif isinstance(node, (ast.Nonlocal)):
+            pass  # TODO
 
         elif isinstance(node, ast.Expr):
             self.minimize_expr(node.value)

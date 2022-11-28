@@ -1,5 +1,6 @@
 import ast
 import pathlib
+import sys
 from collections import Counter
 
 import pytest
@@ -8,18 +9,19 @@ from pysource_minimize import minimize
 
 
 def files():
-    base_dir = pathlib.Path(__file__).parent.parent.parent / "executing"
+    base_dir = pathlib.Path(sys.exec_prefix)
     return base_dir.rglob("*.py")
 
 
 def gen_params():
     for filename in files():
 
-        text = filename.read_text()
         try:
+            text = filename.read_text()
             tree = ast.parse(text)
         except:
-            pass
+            continue
+
         c = Counter(node.id for node in ast.walk(tree) if isinstance(node, ast.Name))
 
         for name, nums in sorted(c.items())[:10]:
