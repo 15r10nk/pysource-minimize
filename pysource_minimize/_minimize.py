@@ -23,22 +23,32 @@ def is_block(nodes):
 
 
 class Minimizer:
-    def __init__(self, source, checker):
+    def __init__(self, source, checker, progress_callback):
 
         self.checker = checker
+        self.progress_callback = progress_callback
 
         self.original_source = source
         self.original_ast = ast.parse(source)
+        self.original_nodes_number = self.nodes_of(self.original_ast)
+
         for i, node in enumerate(ast.walk(self.original_ast)):
             node.__index = i
 
         self.replaced = {}
 
+        if not self.checker(self.original_source):
+            raise ValueError("checker return False: nothing to minimize here")
+
+        source = self.get_source({})
+        if not self.checker(source):
+            print("ast.unparse removes the error minimize can not help here")
+            self.source = self.original_source
+            return
+
         self.minimize_stmt(self.original_ast)
 
         self.source = self.get_source(self.replaced)
-        print(self.source)
-        print(ast.dump(self.get_ast(self.original_ast), indent=4))
 
         console = Console()
 
@@ -102,31 +112,36 @@ class Minimizer:
 
         return tmp_ast
 
-    def get_source(self, replaced):
+    def get_source_tree(self, replaced):
         tree = self.get_ast(self.original_ast, replaced)
         ast.fix_missing_locations(tree)
-        return ast.unparse(tree)
+        return ast.unparse(tree), tree
+
+    def get_source(self, replaced):
+        return self.get_source_tree(replaced)[0]
+
+    @staticmethod
+    def nodes_of(tree):
+        return len(list(ast.walk(tree)))
 
     def try_with(self, replaced={}):
+        """
+        returns True if the minimization was successfull
+        """
 
-        source = self.get_source(replaced)
+        source, tree = self.get_source_tree(replaced)
         try:
             compile(source, "<filename>", "exec")
         except Exception as e:
-            print(source)
-            print(ast.dump(self.get_ast(self.original_ast, replaced), indent=4))
-            print("ex", dir(e))
             if "assigned to before global declaration" in str(e):
                 return False  # todo parse ... compile
+            print(source)
+            print(ast.dump(self.get_ast(self.original_ast, replaced), indent=4))
             raise
 
         if self.checker(source):
-            # print()
-            # print("replaced", replaced)
-            # print("source:")
-            # print(source)
-
             self.replaced = self.replaced | replaced
+            self.progress_callback(self.nodes_of(tree), self.original_nodes_number)
             return True
 
         return False
@@ -471,8 +486,17 @@ class Minimizer:
         devide(stmts)
 
 
-def minimize(source, checker):
+def minimize(source, checker, *, progress_callback=lambda current, total: None):
+    """
+    minimzes the source code
 
-    minimizer = Minimizer(source, checker)
+    Args:
+        checker: a function which gets the source and returns `True` when the criteria is fullfilled.
+        progress_callback: function which is called everytime the source gets a bit smaller.
+
+    returns the minimized source
+    """
+
+    minimizer = Minimizer(source, checker, progress_callback)
 
     return minimizer.source
