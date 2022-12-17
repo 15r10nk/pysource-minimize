@@ -1,5 +1,6 @@
 import ast
 import pathlib
+import random
 import sys
 from collections import Counter
 
@@ -10,7 +11,7 @@ from pysource_minimize import minimize
 
 def files():
     base_dir = pathlib.Path(sys.exec_prefix)
-    return base_dir.rglob("*.py")
+    return random.Random(5).sample(list(base_dir.rglob("*.py")), 10)
 
 
 def gen_params():
