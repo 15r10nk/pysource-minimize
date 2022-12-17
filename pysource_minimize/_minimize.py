@@ -1,17 +1,20 @@
 import ast
-import contextlib
 import copy
-import os
+import sys
 
 from rich.console import Console
 
+try:
+    from ast import unparse
+except ImportError:
+    from astunparse import unparse
 
-@contextlib.contextmanager
-def no_output():
-    with open(os.devnull, "w") as f:
-        with contextlib.redirect_stdout(f):
-            with contextlib.redirect_stderr(f):
-                yield
+
+py311 = sys.version_info >= (3, 11)
+py310 = sys.version_info >= (3, 10)
+py38 = sys.version_info >= (3, 8)
+
+until_py37 = sys.version_info < (3, 8)
 
 
 def is_block(nodes):
@@ -53,7 +56,7 @@ class Minimizer:
         console = Console()
 
     def get_ast(self, node, replaced={}):
-        replaced = self.replaced | replaced
+        replaced = {**self.replaced, **replaced}
 
         tmp_ast = copy.deepcopy(node)
         node_map = {n.__index: n for n in ast.walk(tmp_ast)}
@@ -115,7 +118,7 @@ class Minimizer:
     def get_source_tree(self, replaced):
         tree = self.get_ast(self.original_ast, replaced)
         ast.fix_missing_locations(tree)
-        return ast.unparse(tree), tree
+        return unparse(tree), tree
 
     def get_source(self, replaced):
         return self.get_source_tree(replaced)[0]
@@ -140,7 +143,7 @@ class Minimizer:
             raise
 
         if self.checker(source):
-            self.replaced = self.replaced | replaced
+            self.replaced.update(replaced)
             self.progress_callback(self.nodes_of(tree), self.original_nodes_number)
             return True
 
@@ -228,6 +231,12 @@ class Minimizer:
             pass
         elif isinstance(node, ast.Constant):
             pass
+        elif isinstance(node, ast.Index):
+            pass
+        elif until_py37 and isinstance(
+            node, (ast.Str, ast.Bytes, ast.Num, ast.NameConstant, ast.Ellipsis)
+        ):
+            pass
         elif isinstance(node, ast.Starred):
             self.try_only_minimize(node, node.value)
         elif isinstance(node, ast.Call):
@@ -280,14 +289,6 @@ class Minimizer:
         else:
             raise TypeError(node)  # Expr
 
-            for e in ast.iter_child_nodes(node):
-                if self.try_only(node, e):
-                    self.minimize_expr(e)
-                    return
-
-            for e in ast.iter_child_nodes(node):
-                self.minimize_expr(e)
-
     def minimize_except_handler(self, handler):
         self.minimize_list(handler.body, self.minimize_stmt)
         if handler.type is not None:
@@ -320,7 +321,8 @@ class Minimizer:
 
             nargs = node.args
 
-            self.minimize_list(nargs.posonlyargs, lambda e: None)
+            if py38:
+                self.minimize_list(nargs.posonlyargs, lambda e: None)
             self.minimize_list(nargs.args, lambda e: None)
             self.minimize_list(nargs.kwonlyargs, lambda e: None)
             self.try_none(nargs.vararg)
@@ -384,13 +386,13 @@ class Minimizer:
                 return
             self.minimize_list(node.items, lambda e: None, minimal=1)
 
-        elif isinstance(node, ast.Match):
+        elif py310 and isinstance(node, ast.Match):
             pass  # todo Match
 
         elif isinstance(node, ast.Raise):
             self.try_only_minimize(node, node.exc, node.cause)
 
-        elif isinstance(node, (ast.Try, ast.TryStar)):
+        elif isinstance(node, ast.Try) or (py311 and isinstance(node, ast.TryStar)):
             if self.try_only(node, node.body):
                 self.minimize(node.body)
                 return
@@ -491,6 +493,7 @@ def minimize(source, checker, *, progress_callback=lambda current, total: None):
     minimzes the source code
 
     Args:
+        source: the source code to minimize
         checker: a function which gets the source and returns `True` when the criteria is fullfilled.
         progress_callback: function which is called everytime the source gets a bit smaller.
 
