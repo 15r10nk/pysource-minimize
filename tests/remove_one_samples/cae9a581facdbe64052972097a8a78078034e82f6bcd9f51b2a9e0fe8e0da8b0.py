@@ -1,0 +1,1 @@
+name_2 if name_2 else name_1

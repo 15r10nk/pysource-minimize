@@ -1,3 +1,5 @@
+exclude: tests/.*_samples
+
 repos:
 - hooks:
   - id: check-yaml
@@ -31,11 +33,11 @@ repos:
   rev: v3.9.0
   hooks:
   - args:
-    - --py38-plus
+    - --py37-plus
     id: reorder-python-imports
 - hooks:
   - args:
-    - --py38-plus
+    - --py37-plus
     id: pyupgrade
   repo: https://github.com/asottile/pyupgrade
   rev: v3.3.1

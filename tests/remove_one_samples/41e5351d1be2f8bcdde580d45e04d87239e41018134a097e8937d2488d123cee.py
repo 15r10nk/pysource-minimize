@@ -1,0 +1,1 @@
+lambda name_2=name_5, /, name_5=name_4, name_0=name_2, *, name_1=name_3: {name_1 for name_4 in name_5 if name_5}

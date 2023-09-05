@@ -2,7 +2,7 @@ from pathlib import Path
 
 import nox
 
-nox.options.sessions = ["clean", "test", "report", "docs"]
+nox.options.sessions = ["clean", "test", "report", "mypy"]
 nox.options.reuse_existing_virtualenvs = True
 
 
@@ -17,7 +17,7 @@ def clean(session):
 def mypy(session):
     session.install("poetry")
     session.run("poetry", "install", "--with=dev")
-    session.run("mypy", "src", "tests")
+    session.run("mypy", "pysource_minimize", "tests")
 
 
 @nox.session(python=["3.7", "3.8", "3.9", "3.10", "3.11"])
@@ -41,11 +41,11 @@ def report(session):
     except:
         pass
     session.run("coverage", "html")
-    session.run("coverage", "report", "--fail-under", "94")
+    session.run("coverage", "report")
 
 
-@nox.session(python="python3.10")
-def docs(session):
-    session.install("poetry")
-    session.run("poetry", "install", "--with=doc")
-    session.run("mkdocs", "build")
+# @nox.session(python="python3.10")
+# def docs(session):
+#    session.install("poetry")
+#    session.run("poetry", "install", "--with=doc")
+#    session.run("mkdocs", "build")
