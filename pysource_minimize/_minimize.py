@@ -171,10 +171,11 @@ class Minimizer:
             if source.count("\n") < 15:
                 print(source)
 
-        try:
-            compile(source, "<filename>", "exec")
-        except Exception:
-            return False
+        if 0:
+            try:
+                compile(source, "<filename>", "exec")
+            except Exception:
+                return False
 
         if self.checker(source):
             self.replaced.update(replaced)
@@ -453,6 +454,8 @@ class Minimizer:
                     return
 
             self.minimize_args(node.args)
+            if sys.version_info>= (3,12):
+                self.minimize_list(node.type_params,self.minimize_type_param)
 
             if node.returns:
                 if not self.try_none(node.returns):
@@ -464,6 +467,9 @@ class Minimizer:
 
             if self.try_only_minimize(node, node.body):
                 return
+
+            if sys.version_info>= (3,12):
+                self.minimize_list(node.type_params,self.minimize_type_param)
 
             for e in [
                 *[kw.value for kw in node.keywords],
@@ -587,10 +593,11 @@ class Minimizer:
             def minimize_except_handler(handler):
                 self.minimize_list(handler.body, self.minimize_stmt)
 
-                self.minimize_optional(handler.type)
+                if not handler.name:
+                    self.minimize_optional(handler.type)
 
             self.minimize_list(
-                node.handlers, minimize_except_handler, 0 if node.finalbody else 1
+                node.handlers, minimize_except_handler, 1 # 0 if node.finalbody else 1
             )
             self.minimize(node.body)
             self.minimize(node.orelse)
@@ -619,9 +626,21 @@ class Minimizer:
 
         elif isinstance(node, ast.Module):
             self.minimize(node.body)
+        elif sys.version_info>= (3,12) and isinstance(node, ast.TypeAlias):
+            self.minimize_list(node.type_params,self.minimize_type_param)
+            self.minimize(node.value)
+            self.minimize(node.name)
+
+        elif isinstance(node, ast.Pass):
+            pass
         else:
 
             raise TypeError(node)  # Stmt
+
+    def minimize_type_param(self,node):
+        assert sys.version_info >= (3,12)
+        if isinstance(node,ast.TypeVar):
+            self.minimize_optional(node.bound)
 
     def minimize_lists(self, lists, terminals, minimal=0):
 
