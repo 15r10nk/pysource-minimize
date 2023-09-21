@@ -1,0 +1,1 @@
+(lambda name_1=name_0, /, **name_2: name_3,)

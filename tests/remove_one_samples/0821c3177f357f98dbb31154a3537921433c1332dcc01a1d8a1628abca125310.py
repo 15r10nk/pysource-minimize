@@ -1,0 +1,2 @@
+
+(+ 'some const text')
