@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "pysource-minimize"
-version = "0.3.0"
-description = "find failing section in python source"
+version = "0.4.0"
+description = "minimize python source code"
 authors = ["Frank Hoffmann"]
 license = "MIT"
 readme = "README.md"
