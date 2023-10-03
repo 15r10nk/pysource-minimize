@@ -29,7 +29,6 @@ def is_block(nodes):
 
 class Minimizer:
     def __init__(self, source, checker, progress_callback):
-
         self.checker = checker
         self.progress_callback = progress_callback
 
@@ -97,7 +96,7 @@ class Minimizer:
                 return i
             return node_map[i]
 
-        def replaced_nodes(nodes):
+        def replaced_nodes(nodes, name):
             def replace(l):
                 for i in l:
                     if i not in replaced:
@@ -120,7 +119,7 @@ class Minimizer:
 
             result = list(replace([n.__index for n in nodes]))
 
-            if not result and block:
+            if not result and block and name not in ("orelse", "finalbody"):
                 return [ast.Pass()]
 
             if block:
@@ -136,7 +135,7 @@ class Minimizer:
                 ):
                     setattr(node, name, replaced[(node.__index, name)])
                 elif isinstance(child, list):
-                    setattr(node, name, replaced_nodes(child))
+                    setattr(node, name, replaced_nodes(child, name))
                 else:
                     setattr(node, name, replaced_node(child))
             for child in ast.iter_child_nodes(node):
@@ -338,7 +337,6 @@ class Minimizer:
         elif isinstance(
             node, (ast.ListComp, ast.SetComp, ast.GeneratorExp, ast.DictComp)
         ):
-
             for gen in node.generators:
                 if self.try_only(node, gen.iter):
                     self.minimize_expr(gen.iter)
@@ -550,7 +548,6 @@ class Minimizer:
             self.try_only_minimize(node, node.test, node.body, node.orelse)
 
         elif isinstance(node, (ast.With, ast.AsyncWith)):
-
             for item in node.items:
                 if self.try_only(node, item.context_expr):
                     self.minimize(item.context_expr)
@@ -579,6 +576,19 @@ class Minimizer:
                     self.minimize_optional(node.exc)
 
         elif isinstance(node, ast.Try) or (py311 and isinstance(node, ast.TryStar)):
+            try_star = py311 and isinstance(node, ast.TryStar)
+
+            if try_star and self.try_node(
+                node,
+                ast.Try(
+                    body=node.body,
+                    handlers=node.handlers,
+                    orelse=node.orelse,
+                    finalbody=node.finalbody,
+                ),
+            ):
+                return
+
             if self.try_only(node, node.body):
                 self.minimize(node.body)
                 return
@@ -602,7 +612,7 @@ class Minimizer:
             def minimize_except_handler(handler):
                 self.minimize_list(handler.body, self.minimize_stmt)
 
-                if not handler.name:
+                if not handler.name and not try_star:
                     self.minimize_optional(handler.type)
 
             self.minimize_list(
@@ -622,7 +632,6 @@ class Minimizer:
                 return
 
         elif isinstance(node, (ast.Import, ast.ImportFrom)):
-
             self.minimize_list(node.names, lambda e: None, 1)
 
         elif isinstance(node, (ast.Global)):
@@ -643,7 +652,6 @@ class Minimizer:
         elif isinstance(node, ast.Pass):
             pass
         else:
-
             raise TypeError(node)  # Stmt
 
     def minimize_type_param(self, node):
@@ -652,7 +660,6 @@ class Minimizer:
             self.minimize_optional(node.bound)
 
     def minimize_lists(self, lists, terminals, minimal=0):
-
         lists = list(zip(*lists))
         max_remove = len(lists) - minimal
 
@@ -680,7 +687,6 @@ class Minimizer:
                 else:
                     remaining.append(l[0])
             else:
-
                 mid = len(l) // 2
 
                 # remove in reverse order
@@ -696,7 +702,6 @@ class Minimizer:
                 terminal(node)
 
     def minimize_list(self, stmts, terminal, minimal=0):
-
         # return self.minimize_lists((stmts,),(terminal,),minimal=0)
         stmts = list(stmts)
         max_remove = len(stmts) - minimal
@@ -720,7 +725,6 @@ class Minimizer:
                 else:
                     remaining.append(l[0])
             else:
-
                 mid = len(l) // 2
 
                 # remove in reverse order
