@@ -152,9 +152,12 @@ def test_samples(file):
     except:
         pytest.skip()
 
+    print("source")
+    print(source)
+
     result, source = try_remove_one(source)
 
-    print("source")
+    print("\nnew minimized")
     print(source)
     print("weights:")
     for n, v in node_weights(source):

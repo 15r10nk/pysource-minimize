@@ -38,6 +38,7 @@ data_file = "$TOP/.coverage"
 
 [tool.black]
 force-exclude = "tests/.*_samples"
+skip_magic_trailing_comma = true
 
 [tool.mypy]
 exclude="tests/.*_samples"

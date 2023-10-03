@@ -2,6 +2,8 @@ import ast
 import copy
 import os
 import sys
+from typing import List
+from typing import Union
 
 try:
     from ast import unparse
@@ -25,6 +27,18 @@ def is_block(nodes):
         and nodes
         and all(isinstance(n, ast.stmt) for n in nodes)
     )
+
+
+def arguments(
+    node: Union[ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda]
+) -> List[ast.arg]:
+    args = node.args
+    l = [*args.args, args.vararg, *args.kwonlyargs, args.kwarg]
+
+    if sys.version_info >= (3, 8):
+        l += args.posonlyargs
+
+    return [arg for arg in l if arg is not None]
 
 
 class Minimizer:
@@ -246,6 +260,12 @@ class Minimizer:
             if self.try_only(node, node.left):
                 self.minimize(node.left)
                 return
+
+            for comp in node.comparators:
+                if self.try_only(node, comp):
+                    self.minimize(comp)
+                    return
+
             self.minimize_lists(
                 (node.ops, node.comparators), (lambda _: None, self.minimize)
             )
@@ -254,20 +274,38 @@ class Minimizer:
             self.try_only_minimize(node, node.value, node.slice)
 
         elif isinstance(node, ast.FormattedValue):
+            if (
+                isinstance(node.format_spec, ast.JoinedStr)
+                and len(node.format_spec.values) == 1
+                and self.try_only(node, node.format_spec.values[0])
+            ):
+                self.minimize(node.format_spec.values[0])
+                return
+
             self.try_none(node.format_spec)
             self.minimize_expr(node.value)
 
         elif isinstance(node, ast.JoinedStr):
+            if (
+                len(node.values) == 1
+                and isinstance(node.values[0], ast.FormattedValue)
+                and self.try_only(node, node.values[0].value)
+            ):
+                self.minimize(node.values[0].value)
+                return
+
             self.minimize(node.values)
             # todo minimize values
 
         elif isinstance(node, ast.Slice):
             self.try_only_minimize(node, node.lower, node.upper, node.step)
         elif isinstance(node, ast.Lambda):
+
             if self.try_only_minimize(node, node.body):
                 return
 
-            self.minimize_args(node.args)
+            if self.minimize_args_of(node):
+                return
 
         elif isinstance(node, ast.UnaryOp):
             self.try_only_minimize(node, node.operand)
@@ -338,31 +376,30 @@ class Minimizer:
             node, (ast.ListComp, ast.SetComp, ast.GeneratorExp, ast.DictComp)
         ):
             for gen in node.generators:
+                if self.try_only(node, gen.target):
+                    self.minimize_expr(gen.target)
+                    return
+
                 if self.try_only(node, gen.iter):
                     self.minimize_expr(gen.iter)
                     return
 
+                for if_ in gen.ifs:
+                    if self.try_only(node, if_):
+                        self.minimize_expr(if_)
+                        return
+
             if isinstance(node, ast.DictComp):
-                if self.try_only(node, node.key):
-                    self.minimize_expr(node.key)
+                if self.try_only_minimize(node, node.key, node.value):
                     return
-
-                if self.try_only(node, node.value):
-                    self.minimize_expr(node.value)
-                    return
-
-                self.minimize_expr(node.key)
-                self.minimize_expr(node.value)
             else:
-                if self.try_only(node, node.elt):
-                    self.minimize_expr(node.elt)
+                if self.try_only_minimize(node, node.elt):
                     return
 
-                self.minimize_expr(node.elt)
             self.minimize_list(node.generators, self.minimize_comprehension, 1)
 
         elif isinstance(node, ast.NamedExpr):
-            self.try_only_minimize(node, node.value)
+            self.try_only_minimize(node, node.target, node.value)
         else:
             raise TypeError(node)  # Expr
 
@@ -410,7 +447,19 @@ class Minimizer:
 
             minimize_pattern(c.pattern)
 
-    def minimize_args(self, args):
+    def minimize_args_of(self, func):
+        args = func.args
+
+        for child in [
+            *[arg.annotation for arg in arguments(func)],
+            *func.args.defaults,
+            *func.args.kw_defaults,
+            getattr(func, "returns", None),
+        ]:
+            if child is not None and self.try_only(func, child):
+                self.minimize(child)
+                return True
+
         def minimize_arg(arg: ast.arg):
             if arg.annotation is not None and not self.try_none(arg.annotation):
                 self.minimize(arg.annotation)
@@ -434,6 +483,8 @@ class Minimizer:
 
         if args.kwarg is not None and not self.try_none(args.kwarg):
             minimize_arg(args.kwarg)
+
+        return False
 
     def minimize_stmt(self, node):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -460,7 +511,8 @@ class Minimizer:
                 if self.try_only(node, node.body):
                     return
 
-            self.minimize_args(node.args)
+            if self.minimize_args_of(node):
+                return
             if sys.version_info >= (3, 12):
                 self.minimize_list(node.type_params, self.minimize_type_param)
 
@@ -499,26 +551,30 @@ class Minimizer:
             self.try_only_minimize(node, node.value)
 
         elif isinstance(node, ast.Delete):
+            if len(node.targets) == 1 and self.try_only(node, node.targets[0]):
+                self.minimize(node.targets[0])
+                return
+
             self.minimize_list(node.targets, self.minimize, 1)
 
         elif isinstance(node, ast.Assign):
             self.try_only_minimize(node, node.value, node.targets)
 
-            # todo minimize targets
-
         elif isinstance(node, ast.AugAssign):
-            self.minimize(node.target)
-            self.try_only_minimize(node, node.value)
-            # todo minimize target
+            self.try_only_minimize(node, node.target, node.value)
 
         elif isinstance(node, ast.AnnAssign):
+
             if node.value is None or not self.try_node(
                 node, ast.Assign(targets=[node.target], value=node.value)
             ):
-                self.try_only_minimize(node, node.value, node.annotation)
-            # todo minimize target
+                self.try_only_minimize(node, node.target, node.value, node.annotation)
 
         elif isinstance(node, (ast.For, ast.AsyncFor)):
+            if self.try_only(node, node.target):
+                self.minimize(node.target)
+                return
+
             self.minimize_list(node.body, self.minimize_stmt)
             body = self.get_ast(node)
             if not any(
@@ -548,9 +604,19 @@ class Minimizer:
             self.try_only_minimize(node, node.test, node.body, node.orelse)
 
         elif isinstance(node, (ast.With, ast.AsyncWith)):
+
+            if self.try_only_minimize(node, node.body):
+                return
+
             for item in node.items:
                 if self.try_only(node, item.context_expr):
                     self.minimize(item.context_expr)
+                    return
+
+                if item.optional_vars is not None and self.try_only(
+                    node, item.optional_vars
+                ):
+                    self.minimize(item.optional_vars)
                     return
 
             def minimize_item(item: ast.withitem):
@@ -559,10 +625,21 @@ class Minimizer:
 
             self.minimize_list(node.items, minimize_item, minimal=1)
 
-            self.minimize_list(node.body, self.minimize_stmt)
-
         elif py310 and isinstance(node, ast.Match):
-            self.minimize(node.subject)
+            if self.try_only_minimize(node, node.subject):
+                return
+
+            for case_ in node.cases:
+                for e in [case_.guard, case_.body]:
+                    if e is not None and self.try_only(node, e):
+                        self.minimize(e)
+                        return
+
+                if isinstance(case_.pattern, ast.MatchValue):
+                    if self.try_only(node, case_.pattern.value):
+                        self.minimize(case_.pattern.value)
+                        return
+
             self.minimize_list(node.cases, self.minimize_match_case, 1)
 
         elif isinstance(node, ast.Raise):
