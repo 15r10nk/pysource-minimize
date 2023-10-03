@@ -1,12 +1,20 @@
 import ast
 import hashlib
+import random
 import sys
 from pathlib import Path
 
 import pytest
 from pysource_codegen import generate
 
+import pysource_minimize._minimize
 from pysource_minimize import minimize
+from tests.utils import testing_enabled
+
+try:
+    import pysource_minimize_testing  # type: ignore
+except ImportError:
+    import pysource_minimize as pysource_minimize_testing
 
 sample_dir = Path(__file__).parent / "remove_one_samples"
 
@@ -18,6 +26,7 @@ def node_weights(source):
 
     def weight(node):
 
+        result = 1
         if isinstance(
             node,
             (
@@ -43,56 +52,67 @@ def node_weights(source):
                 ast.ImportFrom,
             ),
         ):
-            return 0
+            result = 0
 
         if isinstance(node, (ast.GeneratorExp, ast.ListComp, ast.SetComp)):
-            return 0
+            result = 0
         if isinstance(node, (ast.DictComp)):
-            return -2
+            result = -2
         if isinstance(node, ast.comprehension):
             # removing comrehension removes variable and iterable
-            return -1
+            result = -1
 
         if isinstance(node, (ast.Dict)):
-            return -len(node.keys) + 1
+            result = -len(node.keys) + 1
         if sys.version_info >= (3, 8) and isinstance(node, ast.NamedExpr):
-            return 0
+            result = 0
 
-        if isinstance(node, (ast.FormattedValue, ast.JoinedStr)):
-            return 0
+        if isinstance(node, ast.FormattedValue):
+            result = 0
+        if isinstance(node, ast.JoinedStr):
+            # work around for https://github.com/python/cpython/issues/110309
+            result = -(
+                sum(isinstance(n, ast.Constant) and n.value == "" for n in node.values)
+            )
 
         if isinstance(node, ast.IfExp):
-            return -1
+            result = -1
         if isinstance(node, ast.Subscript):
-            return 0
+            result = 0
         if isinstance(node, ast.Index):
-            return 0
+            result = 0
 
         # match
         if sys.version_info >= (3, 10):
             if isinstance(node, ast.MatchValue):
-                return -1
+                result = -1
             if isinstance(node, (ast.MatchOr, ast.match_case, ast.MatchClass)):
-                return 0
+                result = 0
             if isinstance(node, ast.Match):
-                return -1  # for the subject
+                result = -1  # for the subject
             if isinstance(node, ast.MatchMapping):
                 # key-value pairs can only be removed together
-                return -len(node.patterns) + 1
+                result = -len(node.patterns) + 1
 
         # try
         if sys.version_info >= (3, 11) and isinstance(node, ast.TryStar):
             # execpt*: is invalid syntax
-            return -len(node.handlers) + 1
+            result = -len(node.handlers) + 1
 
         if isinstance(node, ast.excepthandler):
-            return 0
+            result = 0
+            if node.name:
+                result += 1
 
         if isinstance(node, ast.arguments):
             # kw_defaults and kwonlyargs can only be removed together
-            return -len(node.kw_defaults)
+            result = -len(node.kw_defaults)
 
-        return 1
+        if sys.version_info >= (3, 12):
+            if isinstance(node, ast.TypeAlias):
+                result = 0
+
+        return result
 
     return [(n, weight(n)) for n in ast.walk(tree)]
 
@@ -104,40 +124,30 @@ def count_nodes(source):
 def try_remove_one(source):
     node_count = count_nodes(source)
 
+    def checker(source):
+        try:
+            compile(source, "<string>", "exec")
+        except:
+            return False
+
+        count = count_nodes(source)
+
+        if count == node_count - 1:
+            raise pysource_minimize_testing.StopMinimization
+
+        return count_nodes(source) >= node_count - 1
+
     while node_count > 1:
         # remove only one "node" from the ast at a time
-        new_source = minimize(
-            source, lambda source: count_nodes(source) >= node_count - 1
-        )
 
-        if count_nodes(new_source) != node_count - 1:
-            return False, source
+        with testing_enabled():
+            new_source = pysource_minimize_testing.minimize(source, checker, retries=0)
+
+        assert count_nodes(new_source) == node_count - 1
 
         source = new_source
 
         node_count -= 1
-
-    return True, ""
-
-
-def test_remove_one_generate(seed):
-    source = generate(seed, node_limit=1000, depth_limit=6)
-
-    result, source = try_remove_one(source)
-
-    if not result:
-        # find minimal source where it is not possible to remove one "node"
-
-        def checker(source):
-            result, failed_source = try_remove_one(source)
-
-            return not result
-
-        min_source = minimize(source, checker)
-
-        (
-            sample_dir / f"{hashlib.sha256(min_source.encode('utf-8')).hexdigest()}.py"
-        ).write_text(min_source)
 
 
 @pytest.mark.parametrize(
@@ -150,12 +160,10 @@ def test_samples(file):
     try:
         compile(source, file, "exec")
     except:
-        pytest.skip()
+        pytest.skip("the sample does not compile for the current python version")
 
     print("source")
     print(source)
-
-    result, source = try_remove_one(source)
 
     print("\nnew minimized")
     print(source)
@@ -169,4 +177,35 @@ def test_samples(file):
     else:
         print(ast.dump(ast.parse(source)))
 
-    assert result
+    try_remove_one(source)
+
+
+def generate_remove_one():
+    seed = random.randrange(0, 100000000)
+
+    seed = 1
+
+    source = generate(seed, node_limit=1000, depth_limit=6)
+
+    try:
+        try_remove_one(source)
+    except:
+
+        # find minimal source where it is not possible to remove one "node"
+
+        def checker(source):
+            assert not pysource_minimize._minimize.TESTING
+            try:
+                try_remove_one(source)
+            except Exception as e:
+                return True
+
+            return False
+
+        min_source = minimize(source, checker, dbg=True)
+
+        (
+            sample_dir / f"{hashlib.sha256(min_source.encode('utf-8')).hexdigest()}.py"
+        ).write_text(min_source)
+
+        raise ValueError("new sample found")

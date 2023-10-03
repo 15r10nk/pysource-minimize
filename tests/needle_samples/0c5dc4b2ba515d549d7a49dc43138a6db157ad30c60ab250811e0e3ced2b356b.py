@@ -1,1 +1,0 @@
-lambda *, name_5=needle_17597: name_5

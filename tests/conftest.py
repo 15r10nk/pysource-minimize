@@ -1,6 +1,9 @@
+import os
 import random
 
 import pytest
+
+os.environ["PYSOURCE_TESTING"] = "1"
 
 
 @pytest.fixture(params=range(0))
@@ -17,9 +20,44 @@ def pytest_addoption(parser, pluginmanager):
 
 
 def pytest_sessionfinish(session, exitstatus):
+    print("exitstatus", exitstatus)
+
     if exitstatus == 0 and session.config.option.generate_samples:
+        from .test_remove_one import generate_remove_one
         from .test_needle import generate_needle
 
-        generate_needle()
+        for i in range(2):
+            generate_remove_one()
+            generate_needle()
 
     # teardown_stuff
+
+
+from contextlib import contextmanager
+
+depth = 0
+
+
+@contextmanager
+def ctx(msg):
+    global depth
+    print("│" * depth + "┌", msg)
+    depth += 1
+    try:
+        yield
+    finally:
+        depth -= 1
+        print("│" * depth + "└", msg)
+
+
+import textwrap
+
+
+def ctx_print(*a):
+    s = " ".join(str(e) for e in a)
+    prefix = "│" * (depth)
+    print(textwrap.indent(s, prefix, lambda line: True))
+
+
+__builtins__["ctx"] = ctx
+__builtins__["ctx_print"] = ctx_print

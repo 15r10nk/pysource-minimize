@@ -2,12 +2,25 @@ import ast
 import hashlib
 import itertools
 import random
+import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 from pysource_codegen import generate
 
+import pysource_minimize._minimize
+from .utils import testing_enabled
+
+try:
+    import pysource_minimize_testing  # type: ignore
+except ImportError:
+    import pysource_minimize as pysource_minimize_testing
+
+
 from pysource_minimize import minimize
+from pysource_minimize._minimize import unparse
+
 
 sample_dir = Path(__file__).parent / "needle_samples"
 
@@ -17,6 +30,10 @@ needle_name = "needle_17597"
 
 
 def contains_one_needle(source):
+    try:
+        compile(source, "<string>", "exec")
+    except:
+        return False
     return needle_count(source) == 1
 
 
@@ -31,7 +48,11 @@ def needle_count(source):
 def try_find_needle(source):
     assert contains_one_needle(source)
 
-    new_source = minimize(source, contains_one_needle)
+    with testing_enabled():
+        new_source = pysource_minimize_testing.minimize(
+            source, contains_one_needle, retries=0
+        )
+
     assert new_source.strip() == needle_name
 
 
@@ -46,7 +67,14 @@ def test_needle(file):
     except:
         pytest.skip()
 
+    print(f"the following code can not be minimized to needle:")
     print(source)
+
+    if sys.version_info >= (3, 9):
+        print()
+        print("ast:")
+        print(ast.dump(ast.parse(source), indent=2))
+
     try_find_needle(source)
 
 
@@ -67,9 +95,22 @@ class HideNeedle(ast.NodeTransformer):
 
         return super().generic_visit(node)
 
+    if sys.version_info >= (3, 10):
+
+        def visit_Match(self, node: ast.Match) -> Any:
+            node.subject = self.visit(node.subject)
+            for case_ in node.cases:
+                case_.body = [self.visit(b) for b in case_.body]
+
+            return node
+
+
+import sys
+
 
 def generate_needle():
     seed = random.randrange(0, 100000000)
+    print("seed:", seed)
 
     source = generate(seed, node_limit=10000, depth_limit=6)
 
@@ -83,13 +124,17 @@ def generate_needle():
             break
 
         try:
-            needle_source = ast.unparse(needle_tree)
+            needle_source = unparse(needle_tree)
             compile(needle_source, "<string>", "exec")
         except:
             print("skip this needle")
             continue
 
-        assert contains_one_needle(needle_source)
+        if not contains_one_needle(needle_source):
+            # match 0:
+            #     case needle:
+            # could be generated which can not be reduced to needle
+            continue
 
         try:
             try_find_needle(needle_source)
@@ -98,26 +143,25 @@ def generate_needle():
             print("minimize")
 
             def checker(source):
+                try:
+                    compile(source, "<string>", "exec")
+                except:
+                    return False
+
                 if needle_count(source) != 1:
                     return False
                 try:
                     try_find_needle(source)
                 except:
                     return True
+
                 return False
 
-            try:
-                new_source = minimize(needle_source, checker)
-                print(new_source)
-                (
-                    sample_dir
-                    / f"{hashlib.sha256(new_source.encode('utf-8')).hexdigest()}.py"
-                ).write_text(new_source)
-            except:
-                print("minimize failed")
-                (
-                    sample_dir
-                    / f"{hashlib.sha256(needle_source.encode('utf-8')).hexdigest()}.py"
-                ).write_text(source)
+            new_source = minimize(needle_source, checker)
+            print(new_source)
+            (
+                sample_dir
+                / f"{hashlib.sha256(new_source.encode('utf-8')).hexdigest()}.py"
+            ).write_text(new_source)
 
-            raise
+            raise ValueError("new sample found")

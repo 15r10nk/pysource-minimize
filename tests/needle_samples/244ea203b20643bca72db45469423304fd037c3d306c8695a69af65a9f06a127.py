@@ -1,0 +1,1 @@
+del something[{needle_17597 for name_0 in name_0}], something

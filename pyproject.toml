@@ -21,7 +21,7 @@ pytest-xdist = {extras = ["psutil"], version = "^3.1.0"}
 coverage-enable-subprocess = "^1.0"
 coverage = "^6.5.0"
 mypy = "^1.2.0"
-pysource-codegen = "^0.3.0"
+pysource-codegen = "^0.4.1"
 
 [tool.poetry.scripts]
 pysource-minimize = "pysource_minimize.__main__:main"
@@ -35,6 +35,9 @@ source = ["tests","pysource_minimize"]
 parallel = true
 branch = true
 data_file = "$TOP/.coverage"
+
+[tool.coverage.report]
+exclude_lines = ["assert False", "raise NotImplemented"]
 
 [tool.black]
 force-exclude = "tests/.*_samples"
