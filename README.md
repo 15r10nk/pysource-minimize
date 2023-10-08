@@ -1,3 +1,8 @@
+[![pypi version](https://img.shields.io/pypi/v/pysource-minimize.svg)](https://pypi.org/project/pysource-minimize/)
+![Python Versions](https://img.shields.io/pypi/pyversions/pysource-minimize)
+![PyPI - Downloads](https://img.shields.io/pypi/dw/pysource-minimize)
+[![GitHub Sponsors](https://img.shields.io/github/sponsors/15r10nk)](https://github.com/sponsors/15r10nk)
+
 # pysource-minimize
 
 If you build a linter, formatter or any other tool which has to analyse python source code you might end up searching bugs in pretty large input files.
@@ -15,7 +20,14 @@ pysource-minimize --file bug.py --track "Assertion" -- python bug.py
 This will run `python bug.py` and try to find the string "Assertion" in the output.
 The `--file bug.py` gets minimized as long as "Assertion" is part of the output of the command.
 
+> [!WARNING]
+> Be careful when you execute code which gets minimized.
+> It might be that some combination of the code you minimize erases your hard drive
+> or does other unintended things.
+
 ![example](example.gif)
+
+
 
 ## API
 Example:
