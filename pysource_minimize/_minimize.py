@@ -744,7 +744,6 @@ class Minimizer:
                     return
                 if h.type is not None and self.try_only(node, h.type):
                     self.minimize(h.type)
-                    coverage_required()
                     return
 
             def minimize_except_handler(handler):

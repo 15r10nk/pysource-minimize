@@ -139,6 +139,7 @@ def try_remove_one(source):
 
     while node_count > 1:
         # remove only one "node" from the ast at a time
+        print("node_count:", node_count)
 
         with testing_enabled():
             new_source = pysource_minimize_testing.minimize(source, checker, retries=0)
@@ -182,8 +183,6 @@ def test_samples(file):
 
 def generate_remove_one():
     seed = random.randrange(0, 100000000)
-
-    seed = 1
 
     source = generate(seed, node_limit=1000, depth_limit=6)
 
