@@ -111,6 +111,7 @@ import sys
 def generate_needle():
     seed = random.randrange(0, 100000000)
     print("seed:", seed)
+    seed = 13444151
 
     source = generate(seed, node_limit=10000, depth_limit=6)
 
@@ -147,6 +148,10 @@ def generate_needle():
                     compile(source, "<string>", "exec")
                 except:
                     return False
+
+                print()
+                print("source:")
+                print(source)
 
                 if needle_count(source) != 1:
                     return False

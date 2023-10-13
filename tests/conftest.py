@@ -27,8 +27,8 @@ def pytest_sessionfinish(session, exitstatus):
         from .test_needle import generate_needle
 
         for i in range(2):
-            generate_remove_one()
             generate_needle()
+            generate_remove_one()
 
     # teardown_stuff
 

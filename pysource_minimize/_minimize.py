@@ -724,7 +724,6 @@ class Minimizer:
                 return
 
             if node.orelse and self.try_only(node, node.orelse):
-                coverage_required()
                 self.minimize(node.orelse)
                 return
 
@@ -754,20 +753,21 @@ class Minimizer:
                 node.handlers, minimize_except_handler, 1  # 0 if node.finalbody else 1
             )
             coverage_required()
+
             self.minimize(node.body)
             self.minimize(node.orelse)
             self.minimize(node.finalbody)
 
-            if try_star and self.try_node(
-                node,
-                ast.Try(
-                    body=node.body,
-                    handlers=node.handlers,
-                    orelse=node.orelse,
-                    finalbody=node.finalbody,
-                ),
-            ):
-                return
+            # if try_star and self.try_node(
+            #     node,
+            #     ast.Try(
+            #         body=node.body,
+            #         handlers=node.handlers,
+            #         orelse=node.orelse,
+            #         finalbody=node.finalbody,
+            #     ),
+            # ):
+            #     return
 
         elif isinstance(node, ast.Assert):
             if node.msg:
@@ -936,7 +936,11 @@ def minimize_ast(
     current_ast = original_ast
     while last_success <= retries:
         minimizer = Minimizer(current_ast, checker, progress_callback)
-        new_ast = minimizer.get_current_tree({})
+        try:
+            new_ast = minimizer.get_current_tree({})
+        except:
+            print(ast.dump(current_ast, indent=2))
+            raise
 
         minimized_something = not equal_ast(new_ast, current_ast)
 
