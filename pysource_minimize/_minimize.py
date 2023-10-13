@@ -638,7 +638,6 @@ class Minimizer:
                 self.minimize(node.target)
                 return
 
-            coverage_required()
             self.minimize_list(node.body, self.minimize_stmt)
             body = self.get_ast(node)
             if not any(
