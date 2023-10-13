@@ -625,7 +625,6 @@ class Minimizer:
             if not self.try_node(
                 node, ast.Assign(targets=[node.target], value=node.value)
             ):
-                coverage_required()
                 self.minimize(node.target)
                 self.minimize(node.value)
                 self.minimize(node.annotation)
