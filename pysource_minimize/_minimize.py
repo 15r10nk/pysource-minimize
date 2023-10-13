@@ -751,7 +751,6 @@ class Minimizer:
             self.minimize_list(
                 node.handlers, minimize_except_handler, 1  # 0 if node.finalbody else 1
             )
-            coverage_required()
 
             self.minimize(node.body)
             self.minimize(node.orelse)
