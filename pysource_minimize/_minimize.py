@@ -734,7 +734,6 @@ class Minimizer:
             for h in node.handlers:
                 if self.try_only(node, h.body):
                     self.minimize(h.body)
-                    coverage_required()
                     return
                 if h.type is not None and self.try_only(node, h.type):
                     self.minimize(h.type)
@@ -936,11 +935,7 @@ def minimize_ast(
     current_ast = original_ast
     while last_success <= retries:
         minimizer = Minimizer(current_ast, checker, progress_callback)
-        try:
-            new_ast = minimizer.get_current_tree({})
-        except:
-            print(ast.dump(current_ast, indent=2))
-            raise
+        new_ast = minimizer.get_current_tree({})
 
         minimized_something = not equal_ast(new_ast, current_ast)
 
