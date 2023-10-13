@@ -674,7 +674,6 @@ class Minimizer:
             for item in node.items:
                 if self.try_only(node, item.context_expr):
                     self.minimize(item.context_expr)
-                    coverage_required()
                     return
 
                 if item.optional_vars is not None and self.try_only(
