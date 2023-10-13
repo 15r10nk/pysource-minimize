@@ -663,7 +663,6 @@ class Minimizer:
             pass
 
         elif isinstance(node, ast.If):
-            coverage_required()
             self.try_only_minimize(node, node.test, node.body, node.orelse)
 
         elif isinstance(node, (ast.With, ast.AsyncWith)):
