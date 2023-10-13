@@ -731,7 +731,6 @@ class Minimizer:
                 return
 
             if node.finalbody and self.try_only(node, node.finalbody):
-                coverage_required()
                 self.minimize(node.finalbody)
                 return
 
