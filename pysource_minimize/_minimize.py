@@ -622,7 +622,6 @@ class Minimizer:
                     self.minimize(child)
                     return
 
-            coverage_required()
             if not self.try_node(
                 node, ast.Assign(targets=[node.target], value=node.value)
             ):
