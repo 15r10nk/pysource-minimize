@@ -694,7 +694,6 @@ class Minimizer:
             for case_ in node.cases:
                 for e in [case_.guard, case_.body]:
                     if e is not None and self.try_only(node, e):
-                        coverage_required()
                         self.minimize(e)
                         return
 
