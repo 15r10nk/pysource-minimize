@@ -1,6 +1,7 @@
 import ast
 import copy
 import sys
+import warnings
 from typing import List
 from typing import Union
 
@@ -591,7 +592,6 @@ class Minimizer:
                     self.minimize(e)
                     return
 
-            coverage_required()
             self.minimize(node.bases)
             self.minimize_list(
                 node.keywords, terminal=lambda kw: self.minimize(kw.value)
@@ -984,7 +984,9 @@ def minimize(
     def source_checker(new_ast):
         source = unparse(new_ast)
         try:
-            compile(source, "<string>", "exec")
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", SyntaxWarning)
+                compile(source, "<string>", "exec")
         except:
             return False
 
