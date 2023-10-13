@@ -655,7 +655,6 @@ class Minimizer:
                 isinstance(n, (ast.Break, ast.Continue)) for n in ast.walk(body)
             ):
                 if self.try_only(node, node.body):
-                    coverage_required()
                     return
 
             self.try_only_minimize(node, node.test, node.orelse)
