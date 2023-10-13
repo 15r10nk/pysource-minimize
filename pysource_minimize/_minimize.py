@@ -578,7 +578,6 @@ class Minimizer:
                     ):
                         self.minimize(p.bound)
                         return
-                coverage_required()
                 self.minimize_list(node.type_params, self.minimize_type_param)
 
             for e in [
@@ -590,7 +589,6 @@ class Minimizer:
             ]:
                 if self.try_only(node, e):
                     self.minimize(e)
-                    coverage_required()
                     return
 
             coverage_required()
