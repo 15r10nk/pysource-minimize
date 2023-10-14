@@ -38,6 +38,11 @@ class CoverageRequired(Exception):
     pass
 
 
+def coverage_required():
+    if TESTING:
+        raise CoverageRequired()
+
+
 def equal_ast(lhs, rhs):
     if type(lhs) != type(rhs):
         return False
@@ -57,11 +62,6 @@ def equal_ast(lhs, rhs):
     else:
         return lhs == rhs
         assert False, f"unexpected type {type(lhs)}"
-
-
-def coverage_required():
-    if TESTING:
-        raise CoverageRequired()
 
 
 def arguments(
@@ -743,6 +743,8 @@ class Minimizer:
 
                 if not handler.name and not try_star:
                     self.minimize_optional(handler.type)
+                elif handler.type is not None:
+                    self.minimize(handler.type)
 
                 if handler.name:
                     self.try_attr(handler, "name", None)
