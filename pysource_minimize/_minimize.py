@@ -599,7 +599,6 @@ class Minimizer:
             return
 
         elif isinstance(node, ast.Return):
-            coverage_required()
             self.try_only_minimize(node, node.value)
 
         elif isinstance(node, ast.Delete):
