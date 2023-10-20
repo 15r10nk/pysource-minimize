@@ -7,6 +7,16 @@ license = "MIT"
 readme = "README.md"
 packages = [{include = "pysource_minimize"}]
 
+[tool.commitizen]
+changelog_incremental = true
+major_version_zero = true
+tag_format = "v$major.$minor.$patch$prerelease"
+update_changelog_on_bump = true
+version_files = [
+  "inline_snapshot/__init__.py:version"
+]
+version_provider = "poetry"
+
 [tool.poetry.dependencies]
 python = "^3.7"
 asttokens = "^2.0.8"
