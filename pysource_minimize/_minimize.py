@@ -64,6 +64,14 @@ def equal_ast(lhs, rhs):
         assert False, f"unexpected type {type(lhs)}"
 
 
+class ValueWrapper(ast.AST):
+    def __init__(self, value=None):
+        self.value = value
+
+    def __repr__(self):
+        return f"ValueWrapper({self.value!r})"
+
+
 def arguments(
     node: Union[ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda]
 ) -> List[ast.arg]:
@@ -93,13 +101,29 @@ class Minimizer:
 
         self.original_nodes_number = self.nodes_of(self.original_ast)
 
+        def wrap(value):
+            nonlocal i
+            if isinstance(value, ast.AST):
+                return value
+            elif isinstance(value, list):
+                return [wrap(e) for e in value]
+            elif isinstance(value, (type(None), int, str, bytes)):
+                return ValueWrapper(value)
+            else:
+                assert False
+
+        for node in ast.walk(self.original_ast):
+            for name, value in ast.iter_fields(node):
+                if (type(node).__name__, name) in [("arguments", "kw_defaults")]:
+                    setattr(node, name, wrap(value))
+
         for i, node in enumerate(ast.walk(self.original_ast)):
             node.__index = i
 
         self.replaced = {}
 
         try:
-            if not self.checker(self.original_ast):
+            if not self.checker(self.get_ast(self.original_ast)):
                 raise ValueError("checker return False: nothing to minimize here")
 
             self.minimize_stmt(self.original_ast)
@@ -116,10 +140,10 @@ class Minimizer:
             for a, b in zip(ast.walk(tmp_ast), ast.walk(node)):
                 assert a.__index == b.__index
 
-            unique_index = {}
+            unique__index = {}
             for n in ast.walk(tmp_ast):
-                assert n.__index not in unique_index, (n, unique_index[n.__index])
-                unique_index[n.__index] = n
+                assert n.__index not in unique__index, (n, unique__index[n.__index])
+                unique__index[n.__index] = n
 
             for node in ast.walk(tmp_ast):
                 for field in node._fields:
@@ -138,9 +162,16 @@ class Minimizer:
                 assert isinstance(i, (int, type(None), ast.AST)), (node, i)
             if i is None:
                 return None
+            if isinstance(i, ValueWrapper):
+                return i.value
             if isinstance(i, ast.AST):
                 return i
-            return node_map[i]
+            result = node_map[i]
+
+            if isinstance(result, ValueWrapper):
+                result = result.value
+
+            return result
 
         def replaced_nodes(nodes, name):
             def replace(l):
@@ -164,6 +195,7 @@ class Minimizer:
             block = is_block(nodes)
 
             result = list(replace([n.__index for n in nodes]))
+            result = [e.value if isinstance(e, ValueWrapper) else e for e in result]
 
             if not result and block and name not in ("orelse", "finalbody"):
                 return [ast.Pass()]
@@ -196,6 +228,13 @@ class Minimizer:
                     assert hasattr(
                         node, field
                     ), f"{node.__class__.__name__}.{field} is not defined"
+
+                for field, value in ast.iter_fields(node):
+                    if isinstance(value, list):
+                        assert not any(isinstance(e, ValueWrapper) for e in value)
+                    else:
+                        assert not isinstance(value, ValueWrapper)
+
                 if isinstance(node, ast.arguments):
                     assert len(node.kw_defaults) == len(node.kwonlyargs)
                     if py38:
