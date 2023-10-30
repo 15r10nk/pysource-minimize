@@ -270,6 +270,13 @@ class Minimizer:
         return False
 
     def minimize(self, o):
+        if (
+            sys.version_info >= (3, 8)
+            and isinstance(o, (ast.expr, ast.stmt))
+            and hasattr(o, "type_comment")
+        ):
+            self.try_attr(o, "type_comment", None)
+
         if isinstance(o, ast.expr):
             return self.minimize_expr(o)
         elif isinstance(o, ast.stmt):
@@ -285,9 +292,6 @@ class Minimizer:
 
     def minimize_arg(self, arg: ast.arg):
         self.minimize_optional(arg.annotation)
-
-        if sys.version_info >= (3, 8):
-            self.try_none(arg.type_comment)
 
     def minimize_expr(self, node):
         if isinstance(node, ast.BoolOp):
@@ -793,6 +797,8 @@ class Minimizer:
 
         elif isinstance(node, ast.Module):
             self.minimize(node.body)
+            if sys.version_info >= (3, 8):
+                self.minimize_list(node.type_ignores, lambda e: None)
         elif sys.version_info >= (3, 12) and isinstance(node, ast.TypeAlias):
             for p in node.type_params:
                 if (
