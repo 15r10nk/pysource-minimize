@@ -105,6 +105,7 @@ def node_weights(source):
                 result += 1
 
         if isinstance(node, ast.arguments):
+            # TODO remove this
             # kw_defaults and kwonlyargs can only be removed together
             result = -len(node.kw_defaults)
 

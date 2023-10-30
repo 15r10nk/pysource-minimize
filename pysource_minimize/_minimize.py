@@ -196,6 +196,12 @@ class Minimizer:
                     assert hasattr(
                         node, field
                     ), f"{node.__class__.__name__}.{field} is not defined"
+                if isinstance(node, ast.arguments):
+                    assert len(node.kw_defaults) == len(node.kwonlyargs)
+                    if py38:
+                        assert len(node.defaults) <= len(node.posonlyargs) + len(
+                            node.args
+                        )
 
         return tmp_ast
 
@@ -523,14 +529,24 @@ class Minimizer:
                 self.minimize(child)
                 return True
 
+        all_args = []
         if py38:
-            self.minimize_list(args.posonlyargs)
+            all_args += args.posonlyargs
+        all_args += args.args
 
-        self.minimize_list(args.defaults)
+        split = len(all_args) - len(args.defaults)
+        self.minimize_list(all_args[:split])
+        remaining = self.minimize_lists((all_args[split:], args.defaults))
 
-        self.minimize_list(args.args)
+        for _, default in remaining:
+            if default is not None:
+                if not self.try_without([default]):
+                    break
 
-        self.minimize_lists((args.kwonlyargs, args.kw_defaults))
+        remaining = self.minimize_lists((args.kwonlyargs, args.kw_defaults))
+        for _, default in remaining:
+            if default is not None:
+                self.try_none(default)
 
         self.minimize_optional(args.vararg)
         self.minimize_optional(args.kwarg)
