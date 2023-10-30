@@ -121,6 +121,12 @@ class Minimizer:
                 assert n.__index not in unique_index, (n, unique_index[n.__index])
                 unique_index[n.__index] = n
 
+            for node in ast.walk(tmp_ast):
+                for field in node._fields:
+                    assert hasattr(
+                        node, field
+                    ), f"{node.__class__.__name__}.{field} is not defined"
+
         def replaced_node(node):
             if not isinstance(node, ast.AST):
                 return node
@@ -183,6 +189,13 @@ class Minimizer:
 
         # TODO: this could be optimized (copy all, reduce) -> (generate new ast nodes)
         map_node(tmp_ast)
+
+        if TESTING:
+            for node in ast.walk(tmp_ast):
+                for field in node._fields:
+                    assert hasattr(
+                        node, field
+                    ), f"{node.__class__.__name__}.{field} is not defined"
 
         return tmp_ast
 
@@ -361,7 +374,7 @@ class Minimizer:
         elif isinstance(node, ast.BinOp):
             self.try_only_minimize(node, node.left, node.right)
         elif isinstance(node, ast.Attribute):
-            if not self.try_node(node, ast.Name(id="something")):
+            if not self.try_node(node, ast.Name(id="something", ctx=ast.Load())):
                 self.try_only_minimize(node, node.value)
         elif isinstance(node, ast.IfExp):
             self.try_only_minimize(node, node.test, node.body, node.orelse)
@@ -626,7 +639,12 @@ class Minimizer:
                     return
 
             if not self.try_node(
-                node, ast.Assign(targets=[node.target], value=node.value)
+                node,
+                ast.Assign(
+                    targets=[node.target],
+                    value=node.value,
+                    **(dict(type_comment="") if py38 else {}),
+                ),
             ):
                 self.minimize(node.target)
                 self.minimize(node.value)
@@ -920,7 +938,6 @@ def minimize_ast(
     *,
     progress_callback=lambda current, total: None,
     retries=1,
-    dbg=False,
 ) -> ast.AST:
     """
     minimzes the AST
@@ -935,8 +952,6 @@ def minimize_ast(
     """
 
     last_success = 0
-
-    dbg = True
 
     current_ast = original_ast
     while last_success <= retries:
@@ -958,12 +973,7 @@ def minimize_ast(
 
 
 def minimize(
-    source: str,
-    checker,
-    *,
-    progress_callback=lambda current, total: None,
-    retries=1,
-    dbg=False,
+    source: str, checker, *, progress_callback=lambda current, total: None, retries=1
 ) -> str:
     """
     minimzes the source code
@@ -1000,7 +1010,6 @@ def minimize(
         source_checker,
         progress_callback=progress_callback,
         retries=retries,
-        dbg=dbg,
     )
 
     return unparse(minimized_ast)
