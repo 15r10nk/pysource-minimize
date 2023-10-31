@@ -71,6 +71,9 @@ class ValueWrapper(ast.AST):
     def __repr__(self):
         return f"ValueWrapper({self.value!r})"
 
+    def __eq__(self, other):
+        return self.value == other
+
 
 def arguments(
     node: Union[ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda]
@@ -97,7 +100,7 @@ class Minimizer:
                     return type(node)()
                 return super().visit(node)
 
-        self.original_ast = UniqueObj().visit(original_ast)
+        self.original_ast = UniqueObj().visit(copy.deepcopy(original_ast))
 
         self.original_nodes_number = self.nodes_of(self.original_ast)
 
@@ -186,6 +189,8 @@ class Minimizer:
                             yield from replace(next_i)
                         elif isinstance(next_i, ast.AST):
                             yield next_i
+                        elif next_i is None:
+                            yield None
                         else:
                             raise TypeError(type(next_i))
 
@@ -345,6 +350,8 @@ class Minimizer:
             return self.minimize_list(o, self.minimize)
         elif isinstance(o, ast.arg):
             return self.minimize_arg(o)
+        elif isinstance(o, ValueWrapper):
+            pass
         else:
             raise TypeError(type(o))
 
@@ -564,7 +571,7 @@ class Minimizer:
             *func.args.kw_defaults,
             getattr(func, "returns", None),
         ]:
-            if child is not None and self.try_only(func, child):
+            if child != None and self.try_only(func, child):
                 self.minimize(child)
                 return True
 

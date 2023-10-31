@@ -8,6 +8,7 @@ import pytest
 from pysource_codegen import generate
 
 import pysource_minimize._minimize
+from .dump_tree import dump_tree
 from pysource_minimize import minimize
 from tests.utils import testing_enabled
 
@@ -50,6 +51,7 @@ def node_weights(source):
                 ast.Import,
                 ast.Delete,
                 ast.ImportFrom,
+                ast.arguments,
             ),
         ):
             result = 0
@@ -104,11 +106,6 @@ def node_weights(source):
             if node.name:
                 result += 1
 
-        if isinstance(node, ast.arguments):
-            # TODO remove this
-            # kw_defaults and kwonlyargs can only be removed together
-            result = -len(node.kw_defaults)
-
         if sys.version_info >= (3, 12):
             if isinstance(node, ast.TypeAlias):
                 result = 0
@@ -148,6 +145,13 @@ def try_remove_one(source):
         with testing_enabled():
             new_source = pysource_minimize_testing.minimize(source, checker, retries=0)
 
+        print("\nnew_source:")
+        print(new_source)
+        tree = ast.parse(new_source)
+        weights = dict(node_weights(tree))
+
+        dump_tree(tree, lambda node: f"w={weights[node]}")
+
         assert count_nodes(new_source) == node_count - 1
 
         source = new_source
@@ -170,8 +174,6 @@ def test_samples(file):
     print("source")
     print(source)
 
-    print("\nnew minimized")
-    print(source)
     print("weights:")
     for n, v in node_weights(source):
         if v:
