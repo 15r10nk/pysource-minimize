@@ -8,6 +8,7 @@ import pytest
 from pysource_codegen import generate
 
 import pysource_minimize._minimize
+from . import session_config
 from .dump_tree import dump_tree
 from pysource_minimize import minimize
 from tests.utils import testing_enabled
@@ -145,12 +146,13 @@ def try_remove_one(source):
         with testing_enabled():
             new_source = pysource_minimize_testing.minimize(source, checker, retries=0)
 
-        print("\nnew_source:")
-        print(new_source)
-        tree = ast.parse(new_source)
-        weights = dict(node_weights(tree))
+        if session_config.verbose:
+            print("\nnew_source:")
+            print(new_source)
+            tree = ast.parse(new_source)
+            weights = dict(node_weights(tree))
 
-        dump_tree(tree, lambda node: f"w={weights[node]}")
+            dump_tree(tree, lambda node: f"w={weights[node]}")
 
         assert count_nodes(new_source) == node_count - 1
 
