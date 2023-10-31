@@ -3,12 +3,19 @@ import random
 
 import pytest
 
+from . import session_config
+
 os.environ["PYSOURCE_TESTING"] = "1"
 
 
 @pytest.fixture(params=range(0))
 def seed():
     return random.randrange(0, 100000000)
+
+
+def pytest_report_header(config):
+    if config.getoption("verbose") > 0:
+        session_config.verbose = True
 
 
 def pytest_addoption(parser, pluginmanager):
