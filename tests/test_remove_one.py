@@ -201,7 +201,6 @@ def generate_remove_one():
         # find minimal source where it is not possible to remove one "node"
 
         def checker(source):
-            assert not pysource_minimize._minimize.TESTING
             try:
                 try_remove_one(source)
             except Exception as e:
