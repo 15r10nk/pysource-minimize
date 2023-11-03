@@ -1,5 +1,5 @@
 from ._minimize import minimize
-from ._minimize import StopMinimization
+from ._minimize_base import StopMinimization
 
 
 __all__ = ("minimize", "StopMinimization")
