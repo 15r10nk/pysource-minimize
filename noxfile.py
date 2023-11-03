@@ -5,6 +5,8 @@ import nox
 nox.options.sessions = ["clean", "test", "report", "mypy"]
 nox.options.reuse_existing_virtualenvs = True
 
+python_version = ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]
+
 
 @nox.session(python="python3.10")
 def clean(session):
@@ -13,14 +15,14 @@ def clean(session):
     session.run("coverage", "erase")
 
 
-@nox.session(python="python3.10")
+@nox.session(python=python_version)
 def mypy(session):
     session.install("poetry")
     session.run("poetry", "install", "--with=dev")
     session.run("mypy", "pysource_minimize", "tests")
 
 
-@nox.session(python=["3.7", "3.8", "3.9", "3.10", "3.11", "3.12"])
+@nox.session(python=python_version)
 def test(session):
     session.run_always("poetry", "install", "--with=dev", external=True)
     session.env["COVERAGE_PROCESS_START"] = str(

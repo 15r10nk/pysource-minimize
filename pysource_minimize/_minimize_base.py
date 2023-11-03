@@ -8,14 +8,6 @@ from typing import Union
 TESTING = False
 
 
-py311 = sys.version_info >= (3, 11)
-py310 = sys.version_info >= (3, 10)
-py39 = sys.version_info >= (3, 9)
-py38 = sys.version_info >= (3, 8)
-
-until_py37 = sys.version_info < (3, 8)
-
-
 def is_block(nodes):
     return (
         isinstance(nodes, list)
@@ -239,7 +231,7 @@ class MinimizeBase:
 
                 if isinstance(node, ast.arguments):
                     assert len(node.kw_defaults) == len(node.kwonlyargs)
-                    if py38:
+                    if sys.version_info >= (3, 8):
                         assert len(node.defaults) <= len(node.posonlyargs) + len(
                             node.args
                         )
