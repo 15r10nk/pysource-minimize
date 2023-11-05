@@ -70,6 +70,14 @@ def node_weights(source):
         if sys.version_info >= (3, 8) and isinstance(node, ast.NamedExpr):
             result = 0
 
+        if isinstance(node, ast.Constant):
+            if isinstance(node.value, bool):
+                result = int(node.value) + 1
+            elif isinstance(node.value, int):
+                result = bin(node.value).count("1")
+            elif isinstance(node.value, float):
+                result = abs(int(node.value * 10)) + 1
+
         if isinstance(node, ast.FormattedValue):
             result = 0
         if isinstance(node, ast.JoinedStr):
@@ -146,7 +154,7 @@ def try_remove_one(source):
         with testing_enabled():
             new_source = pysource_minimize_testing.minimize(source, checker, retries=0)
 
-        if session_config.verbose:
+        if session_config.verbose and False:
             print("\nnew_source:")
             print(new_source)
             tree = ast.parse(new_source)

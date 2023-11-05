@@ -74,6 +74,8 @@ def arguments(
 
 
 class MinimizeBase:
+    allow_multiple_mappings = False
+
     def __init__(self, original_ast, checker, progress_callback):
         self.checker = checker
         self.progress_callback = progress_callback
@@ -255,7 +257,7 @@ class MinimizeBase:
         returns True if the minimization was successfull
         """
 
-        if TESTING:
+        if TESTING and not self.allow_multiple_mappings:
             double_defined = self.replaced.keys() & replaced.keys()
             assert (
                 not double_defined
