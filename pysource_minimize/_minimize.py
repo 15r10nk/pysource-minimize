@@ -4,6 +4,7 @@ import warnings
 
 from ._minimize_base import equal_ast
 from ._minimize_structure import MinimizeStructure
+from ._minimize_value import MinimizeValue
 from ._utils import unparse
 
 
@@ -30,15 +31,18 @@ def minimize_ast(
 
     current_ast = original_ast
     while last_success <= retries:
-        minimizer = MinimizeStructure(current_ast, checker, progress_callback)
-        new_ast = minimizer.get_current_tree({})
+        new_ast = current_ast
+
+        for Minimizer in (MinimizeStructure, MinimizeValue):
+            minimizer = Minimizer(new_ast, checker, progress_callback)
+            new_ast = minimizer.get_current_tree({})
+            if minimizer.stop:
+                break
 
         minimized_something = not equal_ast(new_ast, current_ast)
 
         current_ast = new_ast
 
-        if minimizer.stop:
-            break
         if minimized_something:
             last_success = 0
         else:
