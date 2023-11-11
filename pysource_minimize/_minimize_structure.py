@@ -549,10 +549,8 @@ class MinimizeStructure(MinimizeBase):
         elif isinstance(node, (ast.Import, ast.ImportFrom)):
             self.minimize_list(node.names, lambda e: None, 1)
 
-        elif isinstance(node, (ast.Global)):
-            pass  # TODO
-        elif isinstance(node, (ast.Nonlocal)):
-            pass  # TODO
+        elif isinstance(node, (ast.Global, ast.Nonlocal)):
+            self.minimize_list(node.names)
 
         elif isinstance(node, ast.Expr):
             self.minimize_expr(node.value)
