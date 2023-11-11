@@ -93,6 +93,9 @@ def node_weights(source):
         if isinstance(node, ast.Index):
             result = 0
 
+        if isinstance(node, (ast.Nonlocal, ast.Global)):
+            result = len(node.names)
+
         # match
         if sys.version_info >= (3, 10):
             if isinstance(node, ast.MatchValue):
@@ -216,7 +219,7 @@ def generate_remove_one():
 
             return False
 
-        min_source = minimize(source, checker, dbg=True)
+        min_source = minimize(source, checker)
 
         (
             sample_dir / f"{hashlib.sha256(min_source.encode('utf-8')).hexdigest()}.py"

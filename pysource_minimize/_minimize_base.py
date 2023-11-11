@@ -105,7 +105,11 @@ class MinimizeBase:
 
         for node in ast.walk(self.original_ast):
             for name, value in ast.iter_fields(node):
-                if (type(node).__name__, name) in [("arguments", "kw_defaults")]:
+                if (type(node).__name__, name) in [
+                    ("arguments", "kw_defaults"),
+                    ("Nonlocal", "names"),
+                    ("Global", "names"),
+                ]:
                     setattr(node, name, wrap(value))
 
         for i, node in enumerate(ast.walk(self.original_ast)):

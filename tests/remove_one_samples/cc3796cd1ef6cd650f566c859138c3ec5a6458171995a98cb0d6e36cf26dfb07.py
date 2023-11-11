@@ -1,0 +1,1 @@
+global name_1, name_3
