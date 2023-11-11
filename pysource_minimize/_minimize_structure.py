@@ -464,7 +464,7 @@ class MinimizeStructure(MinimizeBase):
             self.minimize_list(node.cases, self.minimize_match_case, 1)
 
         elif isinstance(node, ast.Raise):
-            if self.try_only(node, node.exc):
+            if node.exc and self.try_only(node, node.exc):
                 self.minimize(node.exc)
                 return
 
