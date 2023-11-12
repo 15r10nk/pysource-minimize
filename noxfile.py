@@ -19,6 +19,10 @@ def clean(session):
 def mypy(session):
     session.install("poetry")
     session.run("poetry", "install", "--with=dev")
+
+    if Path("../pysource-minimize/").exists():
+        session.install("../pysource-minimize/")
+
     session.run("mypy", "pysource_minimize", "tests")
 
 
@@ -31,6 +35,8 @@ def test(session):
     session.env["TOP"] = str(Path(__file__).parent)
     args = [] if session.posargs else ["-n", "auto", "-v"]
     session.install("attrs")  # some bug with pytest-subtests
+    if Path("../pysource-minimize/").exists():
+        session.install("../pysource-minimize/")
 
     session.run("pytest", *args, "tests", *session.posargs)
 
