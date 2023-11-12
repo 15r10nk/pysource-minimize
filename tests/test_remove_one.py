@@ -77,14 +77,14 @@ def node_weights(source):
                 result = bin(node.value).count("1")
             elif isinstance(node.value, float):
                 result = abs(int(node.value * 10)) + 1
+            elif isinstance(node.value, (bytes, str)):
+                result = len(node.value) + 1
 
         if isinstance(node, ast.FormattedValue):
             result = 0
         if isinstance(node, ast.JoinedStr):
             # work around for https://github.com/python/cpython/issues/110309
-            result = -(
-                sum(isinstance(n, ast.Constant) and n.value == "" for n in node.values)
-            )
+            result = -(sum(isinstance(n, ast.Constant) for n in node.values))
 
         if isinstance(node, ast.IfExp):
             result = -1

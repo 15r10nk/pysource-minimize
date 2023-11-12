@@ -1,6 +1,13 @@
 from pysource_minimize import minimize
 
 
+def test_find_bug_in_string():
+    assert (
+        eval(minimize("print('some bug here')", lambda source: "bug" in source))
+        == "bug"
+    )
+
+
 def test_minimize_int():
     def contains_bug(source):
         try:

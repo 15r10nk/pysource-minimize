@@ -73,7 +73,9 @@ class MinimizeStructure(MinimizeBase):
                     self.minimize(spec[0])
                     return
 
-            self.try_none(node.format_spec)
+            if not self.try_none(node.format_spec):
+                self.minimize(node.format_spec)
+
             self.minimize_expr(node.value)
 
         elif isinstance(node, ast.JoinedStr):
