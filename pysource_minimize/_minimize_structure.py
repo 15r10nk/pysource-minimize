@@ -201,7 +201,7 @@ class MinimizeStructure(MinimizeBase):
             assert False, "expression is not handled " % (node)
 
     def minimize_optional(self, node):
-        if node is not None and not self.try_none(node):
+        if not self.try_none(node):
             self.minimize(node)
 
     if sys.version_info >= (3, 10):
@@ -239,7 +239,7 @@ class MinimizeStructure(MinimizeBase):
 
             self.minimize(c.body)
 
-            if c.guard and not self.try_none(c.guard):
+            if not self.try_none(c.guard):
                 self.minimize(c.guard)
 
             minimize_pattern(c.pattern)
