@@ -302,8 +302,9 @@ class MinimizeBase:
         return self.try_with({n.__index: [] for n in nodes})
 
     def try_none(self, node):
-        if node is not None:
-            return self.try_with({node.__index: None})
+        if node is None:
+            return True
+        return self.try_with({node.__index: None})
 
     def try_only(self, node, child) -> bool:
         if isinstance(child, list):
