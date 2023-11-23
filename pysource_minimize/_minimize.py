@@ -1,10 +1,10 @@
 import ast
-import sys
 import warnings
 
 from ._minimize_base import equal_ast
 from ._minimize_structure import MinimizeStructure
 from ._minimize_value import MinimizeValue
+from ._utils import parse
 from ._utils import unparse
 
 
@@ -65,10 +65,8 @@ def minimize(
 
     returns the minimized source
     """
-    if sys.version_info >= (3, 8):
-        original_ast = ast.parse(source, type_comments=True)
-    else:
-        original_ast = ast.parse(source)
+
+    original_ast = parse(source)
 
     def source_checker(new_ast):
         source = unparse(new_ast)
