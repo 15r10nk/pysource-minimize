@@ -7,6 +7,17 @@ from ._minimize_base import MinimizeBase
 from ._minimize_base import ValueWrapper
 
 
+def walk_until(node, stop=()):
+    if isinstance(node, list):
+        for e in node:
+            yield from walk_until(e, stop)
+        return
+    yield node
+    for child in ast.iter_child_nodes(node):
+        if not isinstance(child, stop):
+            yield from walk_until(child)
+
+
 class MinimizeStructure(MinimizeBase):
     def minimize(self, o):
         if (
@@ -287,7 +298,7 @@ class MinimizeStructure(MinimizeBase):
                 return
 
             self.minimize_list(node.body, self.minimize_stmt)
-            body = self.get_ast(node)
+            body = self.get_ast(node).body
 
             if not any(
                 isinstance(
@@ -301,7 +312,15 @@ class MinimizeStructure(MinimizeBase):
                         ast.AsyncWith,
                     ),
                 )
-                for n in ast.walk(body)
+                for n in walk_until(
+                    body,
+                    (
+                        ast.GeneratorExp,
+                        ast.FunctionDef,
+                        ast.ClassDef,
+                        ast.AsyncFunctionDef,
+                    ),
+                )
             ):
                 if self.try_only(node, node.body):
                     return
