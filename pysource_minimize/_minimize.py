@@ -69,9 +69,9 @@ def minimize(
     original_ast = parse(source)
 
     def source_checker(new_ast):
-        source = unparse(new_ast)
         try:
             with warnings.catch_warnings():
+                source = unparse(new_ast)
                 warnings.simplefilter("ignore", SyntaxWarning)
                 compile(source, "<string>", "exec")
         except:
