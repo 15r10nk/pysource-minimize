@@ -107,6 +107,13 @@ class MinimizeStructure(MinimizeBase):
 
         elif isinstance(node, ast.Slice):
             self.try_only_minimize(node, node.lower, node.upper, node.step)
+
+        elif isinstance(node, ast.ExtSlice):
+            self.minimize_list(node.dims, minimal=1)
+
+        elif isinstance(node, ast.Index):
+            self.minimize(node.value)
+
         elif isinstance(node, ast.Lambda):
             if self.try_only_minimize(node, node.body):
                 return
