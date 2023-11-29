@@ -1,3 +1,17 @@
+## v0.6.1 (2023-11-29)
+
+### Fix
+
+- minimize every type comment
+- **3.8**: support for Index and ExtSlice
+- correct minimization of FormattedValue
+- ignore code in async inner scopes when we try to minimize a function to its body
+- correct minimization of optional nodes
+
+### Refactor
+
+- extracted parse function
+
 ## v0.6.0 (2023-11-12)
 
 ### Feat
