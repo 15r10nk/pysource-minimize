@@ -216,7 +216,7 @@ class MinimizeStructure(MinimizeBase):
         elif isinstance(node, ast.NamedExpr):
             self.try_only_minimize(node, node.target, node.value)
         else:
-            assert False, "expression is not handled " % (node)
+            assert False, "expression is not handled %s" % (node)
 
     def minimize_optional(self, node):
         if not self.try_none(node):
@@ -304,7 +304,7 @@ class MinimizeStructure(MinimizeBase):
             if self.try_only_minimize(node, node.decorator_list):
                 return
 
-            self.minimize_list(node.body, self.minimize_stmt)
+            self.minimize_list(node.body)
             body = self.get_ast(node).body
 
             if not any(
@@ -425,7 +425,7 @@ class MinimizeStructure(MinimizeBase):
                 self.minimize(node.target)
                 return
 
-            self.minimize_list(node.body, self.minimize_stmt)
+            self.minimize_list(node.body)
             body = self.get_ast(node)
             if not any(
                 isinstance(n, (ast.Break, ast.Continue)) for n in ast.walk(body)
@@ -437,7 +437,7 @@ class MinimizeStructure(MinimizeBase):
             self.minimize(node.target)
 
         elif isinstance(node, ast.While):
-            self.minimize_list(node.body, self.minimize_stmt)
+            self.minimize_list(node.body)
             body = self.get_ast(node)
             if not any(
                 isinstance(n, (ast.Break, ast.Continue)) for n in ast.walk(body)
@@ -533,7 +533,7 @@ class MinimizeStructure(MinimizeBase):
                     return
 
             def minimize_except_handler(handler):
-                self.minimize_list(handler.body, self.minimize_stmt)
+                self.minimize_list(handler.body)
 
                 if not handler.name and not try_star:
                     self.minimize_optional(handler.type)
