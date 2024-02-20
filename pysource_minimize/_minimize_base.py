@@ -306,11 +306,17 @@ class MinimizeBase:
             return True
         return self.try_with({node.__index: None})
 
-    def try_only(self, node, child) -> bool:
-        if isinstance(child, list):
-            return self.try_with({node.__index: [c.__index for c in child]})
-        else:
-            return self.try_with({node.__index: child.__index})
+    def try_only(self, node, *childs) -> bool:
+        for child in childs:
+            if isinstance(child, list):
+                if self.try_with({node.__index: [c.__index for c in child]}):
+                    return True
+            elif child is None:
+                continue
+            else:
+                if self.try_with({node.__index: child.__index}):
+                    return True
+        return False
 
     def try_only_minimize(self, node, *childs):
         childs = [child for child in childs if child is not None]
