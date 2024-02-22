@@ -138,6 +138,9 @@ class MinimizeStructure(MinimizeBase):
         elif isinstance(node, ast.Await):
             self.try_only_minimize(node, node.value)
         elif isinstance(node, ast.Yield):
+            if node.value is None:
+                if self.try_node(node, ast.Constant(value=None, kind="")):
+                    return
             self.try_only_minimize(node, node.value)
         elif isinstance(node, ast.YieldFrom):
             self.try_only_minimize(node, node.value)
