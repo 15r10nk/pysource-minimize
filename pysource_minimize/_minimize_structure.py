@@ -287,17 +287,25 @@ class MinimizeStructure(MinimizeBase):
 
         split = len(all_args) - len(args.defaults)
         self.minimize_list(all_args[:split])
-        remaining = self.minimize_lists((all_args[split:], args.defaults))
+        remaining = self.minimize_lists(
+            (all_args[split:], args.defaults), (self.minimize, lambda a: None)
+        )
 
+        remove_defaults = True
         for _, default in remaining:
-            if default is not None:
-                if not self.try_without([default]):
-                    break
+            if remove_defaults:
+                if default is not None:
+                    if not self.try_without([default]):
+                        self.minimize(default)
+                        remove_defaults = False
+            else:
+                self.minimize(default)
 
-        remaining = self.minimize_lists((args.kwonlyargs, args.kw_defaults))
+        remaining = self.minimize_lists(
+            (args.kwonlyargs, args.kw_defaults), (self.minimize, lambda a: None)
+        )
         for _, default in remaining:
-            if default is not None:
-                self.try_none(default)
+            self.minimize_optional(default)
 
         self.minimize_optional(args.vararg)
         self.minimize_optional(args.kwarg)
