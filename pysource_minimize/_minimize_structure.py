@@ -247,18 +247,7 @@ class MinimizeStructure(MinimizeBase):
                 elif isinstance(pattern, ast.MatchClass):
                     self.minimize(pattern.cls)
                     self.minimize_list(pattern.patterns, minimize_pattern)
-
-                    new_attrs = list(pattern.kwd_attrs)
-
-                    for i in reversed(range(len(pattern.kwd_patterns))):
-                        try_attrs = [v for j, v in enumerate(new_attrs) if j != i]
-                        if self.try_with(
-                            {
-                                self.index_of(pattern.kwd_patterns[i]): [],
-                                (self.index_of(pattern), "kwd_attrs"): try_attrs,
-                            }
-                        ):
-                            new_attrs = try_attrs
+                    self.minimize_lists((pattern.kwd_attrs, pattern.kwd_patterns))
 
             self.minimize(c.body)
 

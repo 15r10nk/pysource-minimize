@@ -109,6 +109,7 @@ class MinimizeBase:
                     ("arguments", "kw_defaults"),
                     ("Nonlocal", "names"),
                     ("Global", "names"),
+                    ("MatchClass", "kwd_attrs"),
                 ]:
                     setattr(node, name, wrap(value))
 
