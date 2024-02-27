@@ -37,6 +37,8 @@ class MinimizeStructure(MinimizeBase):
             return self.minimize_list(o, self.minimize)
         elif isinstance(o, ast.arg):
             return self.minimize_arg(o)
+        elif isinstance(o, ast.pattern):
+            pass
         elif isinstance(o, ValueWrapper):
             pass
         else:
@@ -422,7 +424,7 @@ class MinimizeStructure(MinimizeBase):
                 ),
             ):
                 self.minimize(node.target)
-                self.minimize(node.value)
+                self.minimize_optional(node.value)
                 self.minimize(node.annotation)
 
         elif isinstance(node, (ast.For, ast.AsyncFor)):
@@ -506,7 +508,6 @@ class MinimizeStructure(MinimizeBase):
                 # cause requires exc
                 # `raise from cause` is not valid
                 if self.get_ast(node).cause:
-                    coverage_required()
                     self.minimize(node.exc)
                 else:
                     coverage_required()
