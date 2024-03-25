@@ -1,3 +1,12 @@
+## v0.6.2 (2024-03-25)
+
+### Fix
+
+- minimize (yield) to None
+- minimization of MatchClass
+- minimization of default arguments
+- minimize slice correctly
+
 ## v0.6.1 (2023-11-29)
 
 ### Fix
