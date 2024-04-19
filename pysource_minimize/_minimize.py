@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import ast
 import warnings
+from collections.abc import Callable
 
 from ._minimize_base import equal_ast
 from ._minimize_structure import MinimizeStructure
@@ -52,7 +55,11 @@ def minimize_ast(
 
 
 def minimize(
-    source: str, checker, *, progress_callback=lambda current, total: None, retries=1
+    source: str,
+    checker: Callable[[str], bool],
+    *,
+    progress_callback: Callable[[int, int], object] = lambda current, total: None,
+    retries: int = 1,
 ) -> str:
     """
     minimzes the source code
