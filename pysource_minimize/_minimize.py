@@ -57,7 +57,7 @@ def minimize(
     checker: Callable[[str], bool],
     *,
     progress_callback: Callable[[int, int], object] = lambda current, total: None,
-    retries: int = 1
+    retries: int = 1,
 ) -> str:
     """
     minimzes the source code
