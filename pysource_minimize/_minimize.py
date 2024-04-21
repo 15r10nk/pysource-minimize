@@ -54,6 +54,10 @@ def minimize_ast(
     return current_ast
 
 
+class CouldNotMinimize(ValueError):
+    """Raised to indicate that the source code could not be minimized."""
+
+
 def minimize(
     source: str,
     checker: Callable[[str], bool],
@@ -87,7 +91,10 @@ def minimize(
         return checker(source)
 
     if not source_checker(original_ast):
-        raise ValueError("ast.unparse removes the error minimize can not help here")
+        raise CouldNotMinimize(
+            "Source code cannot be minimized: the error failed to reproduce "
+            "after roundtripping the source using `ast.parse()` and `ast.unparse()`"
+        )
 
     minimized_ast = minimize_ast(
         original_ast,
