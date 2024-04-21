@@ -1,4 +1,5 @@
-from ._minimize import minimize, CouldNotMinimize
+from ._minimize import CouldNotMinimize
+from ._minimize import minimize
 from ._minimize_base import StopMinimization
 
 
