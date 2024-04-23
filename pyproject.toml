@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pysource-minimize"
-version = "0.6.2"
+version = "0.6.3"
 description = "minimize python source code"
 authors = ["Frank Hoffmann"]
 license = "MIT"
