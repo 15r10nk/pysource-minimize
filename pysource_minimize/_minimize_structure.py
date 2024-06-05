@@ -616,6 +616,10 @@ class MinimizeStructure(MinimizeBase):
         if isinstance(node, ast.TypeVar):
             self.minimize_optional(node.bound)
 
+        if sys.version_info >= (3, 13):
+            if not self.try_none(node.default_value):
+                self.minimize(node.default_value)
+
     def minimize_lists(self, lists, terminals=None, minimal=0):
         if terminals is None:
             terminals = [self.minimize for _ in lists]
