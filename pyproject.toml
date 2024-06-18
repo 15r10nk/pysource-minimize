@@ -18,7 +18,6 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: PyPy"
 ]
 dependencies = [
-"asttokens >=2.0.8",
 "rich >=12.6.0",
 "astunparse >=1.6.3",
 "click >=8.1.7",
@@ -54,54 +53,12 @@ version_files = [
 ]
 version_provider = "pep621"
 
-[tool.coverage.paths]
-pysource_minimize = ["src/pysource_minimize", "*/pysource-minimize/src/pysource_minimize"]
-tests = ["tests", "*/pysource-minimize/tests"]
-
-[tool.coverage.report]
-exclude_lines = ["pragma: no cover", "assert False", "raise NotImplemented", "\\.\\.\\."]
-
-[tool.coverage.run]
-branch = true
-data_file = "$TOP/.coverage"
-omit = [
-  "src/pysource_minimize/__about__.py"
-]
-parallel = true
-
-
 [tool.hatch.envs.hatch-test]
 extra-dependencies = [
 "pysource-codegen>=0.4.1",
   "inline-snapshot",
   "pytest-xdist[psutil] >=3.1.0",
 ]
-
-[tool.hatch.envs.all]
-dependencies = [
-  "coverage[toml]>=6.5",
-  "coverage-enable-subprocess",
-  "pytest",
-  "inline-snapshot"
-]
-env-vars.TOP = "{root}"
-scripts.test-cov = "coverage run -m pytest {args:tests}"
-
-[[tool.hatch.envs.all.matrix]]
-python = ["3.8", "3.9", "3.10", "3.11", "3.12"]
-
-[tool.hatch.envs.cov]
-dependencies = ["coverage[toml]>=6.5"]
-detached = true
-env-vars.TOP = "{root}"
-scripts.test = [
-  "- coverage erase",
-  "hatch run all:test-cov -- {args}",
-  "coverage combine",
-  "coverage html",
-  "coverage report "
-]
-
 
 [tool.hatch.envs.docs]
 dependencies = [
