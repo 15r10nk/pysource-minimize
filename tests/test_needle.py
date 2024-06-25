@@ -6,10 +6,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import pysource_minimize._minimize
 import pytest
 from pysource_codegen import generate
 
-import pysource_minimize._minimize
 from .utils import testing_enabled
 
 try:

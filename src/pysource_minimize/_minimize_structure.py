@@ -307,6 +307,24 @@ class MinimizeStructure(MinimizeBase):
         return False
 
     def minimize_stmt(self, node):
+
+        if sys.version_info >= (3, 12) and hasattr(node, "type_params"):
+
+            for p in node.type_params:
+                if isinstance(p, ast.TypeVar):
+                    if p.bound is not None and self.try_only(node, p.bound):
+                        self.minimize(p.bound)
+                        return
+
+                if (
+                    sys.version_info >= (3, 13)
+                    and p.default_value is not None
+                    and self.try_only(node, p.default_value)
+                ):
+                    self.minimize(p.default_value)
+                    return
+            self.minimize_list(node.type_params, self.minimize_type_param)
+
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             if self.try_only_minimize(node, node.decorator_list):
                 return
@@ -342,17 +360,6 @@ class MinimizeStructure(MinimizeBase):
             if self.minimize_args_of(node):
                 return
 
-            if sys.version_info >= (3, 12):
-                for p in node.type_params:
-                    if (
-                        isinstance(p, ast.TypeVar)
-                        and p.bound is not None
-                        and self.try_only(node, p.bound)
-                    ):
-                        self.minimize(p.bound)
-                        return
-                self.minimize_list(node.type_params, self.minimize_type_param)
-
             if node.returns:
                 if not self.try_none(node.returns):
                     self.minimize_expr(node.returns)
@@ -363,17 +370,6 @@ class MinimizeStructure(MinimizeBase):
 
             if self.try_only_minimize(node, node.body):
                 return
-
-            if sys.version_info >= (3, 12):
-                for p in node.type_params:
-                    if (
-                        isinstance(p, ast.TypeVar)
-                        and p.bound is not None
-                        and self.try_only(node, p.bound)
-                    ):
-                        self.minimize(p.bound)
-                        return
-                self.minimize_list(node.type_params, self.minimize_type_param)
 
             for e in [
                 *[kw.value for kw in node.keywords],
@@ -594,17 +590,8 @@ class MinimizeStructure(MinimizeBase):
             if sys.version_info >= (3, 8):
                 self.minimize_list(node.type_ignores, lambda e: None)
         elif sys.version_info >= (3, 12) and isinstance(node, ast.TypeAlias):
-            for p in node.type_params:
-                if (
-                    isinstance(p, ast.TypeVar)
-                    and p.bound is not None
-                    and self.try_only(node, p.bound)
-                ):
-                    self.minimize(p.bound)
-                    return
             if self.try_only_minimize(node, node.name, node.value):
                 return
-            self.minimize_list(node.type_params, self.minimize_type_param)
 
         elif isinstance(node, ast.Pass):
             pass
@@ -615,6 +602,10 @@ class MinimizeStructure(MinimizeBase):
         assert sys.version_info >= (3, 12)
         if isinstance(node, ast.TypeVar):
             self.minimize_optional(node.bound)
+
+        if sys.version_info >= (3, 13):
+            if not self.try_none(node.default_value):
+                self.minimize(node.default_value)
 
     def minimize_lists(self, lists, terminals=None, minimal=0):
         if terminals is None:
