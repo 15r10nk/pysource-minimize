@@ -4,13 +4,13 @@ import random
 import sys
 from pathlib import Path
 
+import pysource_minimize._minimize
 import pytest
 from pysource_codegen import generate
+from pysource_minimize import minimize
 
-import pysource_minimize._minimize
 from . import session_config
 from .dump_tree import dump_tree
-from pysource_minimize import minimize
 from tests.utils import testing_enabled
 
 try:
