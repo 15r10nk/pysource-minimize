@@ -10,28 +10,28 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+        python-version: ['3.8', '3.10', '3.11', '3.12']
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-python@v4
       with:
         python-version: ${{matrix.python-version}}
         architecture: x64
-    - run: pip install nox==2022.11.21
-    - run: pip install poetry==1.2.2
-    - run: nox --session mypy-${{matrix.python-version}}
+        allow-prereleases: true
+    - run: pip install hatch
+    - run: hatch run +py=${{matrix.python-version}} mypy:test
 
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12', '3.13']
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-python@v4
       with:
         python-version: ${{matrix.python-version}}
         architecture: x64
-    - run: pip install nox==2022.11.21
-    - run: pip install poetry==1.2.2
-    - run: nox --sessions test-${{matrix.python-version}}
+        allow-prereleases: true
+    - run: pip install hatch
+    - run: hatch test -py ${{matrix.python-version}}

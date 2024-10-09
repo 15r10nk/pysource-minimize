@@ -64,6 +64,7 @@ def minimize(
     *,
     progress_callback: Callable[[int, int], object] = lambda current, total: None,
     retries: int = 1,
+    compilable=True,
 ) -> str:
     """
     minimzes the source code
@@ -73,6 +74,7 @@ def minimize(
         checker: a function which gets the source and returns `True` when the criteria is fullfilled.
         progress_callback: function which is called everytime the source gets a bit smaller.
         retries: the number of retries which sould be performed when the ast could be minimized (useful for non deterministic issues)
+        compilable: make shure that the minimized code can also be compiled and not just parsed.
 
     returns the minimized source
     """
@@ -84,7 +86,8 @@ def minimize(
             with warnings.catch_warnings():
                 source = unparse(new_ast)
                 warnings.simplefilter("ignore", SyntaxWarning)
-                compile(source, "<string>", "exec")
+                if compilable:
+                    compile(source, "<string>", "exec")
         except:
             return False
 
