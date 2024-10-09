@@ -16,6 +16,12 @@ def is_block(nodes):
     )
 
 
+if sys.version_info < (3, 13):
+    ast_const_types = (ast.Constant, ast.NameConstant)
+else:
+    ast_const_types = (ast.Constant,)
+
+
 class StopMinimization(Exception):
     pass
 
@@ -272,8 +278,7 @@ class MinimizeBase:
 
         for node in ast.walk(tree):
             if isinstance(node, ast.Delete) and any(
-                isinstance(target, (ast.Constant, ast.NameConstant))
-                for target in node.targets
+                isinstance(target, ast_const_types) for target in node.targets
             ):
                 # code like:
                 # delete None
