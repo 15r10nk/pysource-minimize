@@ -1,3 +1,14 @@
+## v0.7.0 (2024-10-09)
+
+### Feat
+
+- added compilable flag
+
+### Fix
+
+- unified handling of type_params
+- minimize default_value of type_params
+
 ## v0.6.3 (2024-04-23)
 
 ### Fix
