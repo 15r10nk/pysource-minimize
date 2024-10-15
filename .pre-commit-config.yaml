@@ -25,7 +25,7 @@ repos:
   rev: v2.3.1
 
 - repo: https://github.com/asottile/reorder-python-imports
-  rev: v3.13.0
+  rev: v3.14.0
   hooks:
   - args:
     - --py37-plus
@@ -35,7 +35,7 @@ repos:
     - --py37-plus
     id: pyupgrade
   repo: https://github.com/asottile/pyupgrade
-  rev: v3.17.0
+  rev: v3.18.0
 - hooks:
   - id: black
   repo: https://github.com/psf/black
