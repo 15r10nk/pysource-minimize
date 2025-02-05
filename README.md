@@ -1,40 +1,47 @@
-<!-- -8<- [start:Header] -->
-
-
-![ci](https://github.com/15r10nk/pysource-minimize/actions/workflows/ci.yml/badge.svg?branch=main)
-[![Docs](https://img.shields.io/badge/docs-mkdocs-green)](https://15r10nk.github.io/pysource-minimize/)
 [![pypi version](https://img.shields.io/pypi/v/pysource-minimize.svg)](https://pypi.org/project/pysource-minimize/)
 ![Python Versions](https://img.shields.io/pypi/pyversions/pysource-minimize)
 ![PyPI - Downloads](https://img.shields.io/pypi/dw/pysource-minimize)
 [![GitHub Sponsors](https://img.shields.io/github/sponsors/15r10nk)](https://github.com/sponsors/15r10nk)
 
-<!-- -8<- [end:Header] -->
+# pysource-minimize
 
-## Installation
+If you build a linter, formatter or any other tool which has to analyse python source code you might end up searching bugs in pretty large input files.
 
+`pysource_minimize` is able to remove everything from the python source which is not related to the problem.
 
-You can install "pysource-minimize" via [pip](https://pypi.org/project/pip/):
+## CLI
 
-``` bash
-pip install pysource-minimize
+You can use `pysource-minimize` from the command line like follow:
+
+```bash
+pysource-minimize --file bug.py --track "Assertion" -- python bug.py
 ```
 
+This will run `python bug.py` and try to find the string "Assertion" in the output.
+The `--file bug.py` gets minimized as long as "Assertion" is part of the output of the command.
 
-## Key Features
+> [!WARNING]
+> Be careful when you execute code which gets minimized.
+> It might be that some combination of the code you minimize erases your hard drive
+> or does other unintended things.
 
-- **list** of features ...
+![example](example.gif)
 
 
-## Usage
 
-usage ...
+## API
+Example:
+``` pycon
+>>> from pysource_minimize import minimize
 
-<!-- -8<- [start:Feedback] -->
-## Issues
+>>> source = """
+... def f():
+...     print("bug"+"other string")
+...     return 1+1
+... f()
+... """
 
-If you encounter any problems, please [report an issue](https://github.com/15r10nk/pysource-minimize/issues) along with a detailed description.
-<!-- -8<- [end:Feedback] -->
+>>> print(minimize(source, lambda new_source: "bug" in new_source))
+"""bug"""
 
-## License
-
-Distributed under the terms of the [MIT](http://opensource.org/licenses/MIT) license, "pysource-minimize" is free and open source software.
+```
