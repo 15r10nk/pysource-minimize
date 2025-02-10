@@ -62,7 +62,7 @@ class ValueWrapper(ast.AST):
 
 
 def arguments(
-    node: Union[ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda]
+    node: Union[ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda],
 ) -> List[ast.arg]:
     args = node.args
     l = [*args.args, args.vararg, *args.kwonlyargs, args.kwarg]
