@@ -3,6 +3,7 @@ import hashlib
 import random
 import sys
 from pathlib import Path
+from typing import Optional
 
 import pysource_minimize._minimize
 import pytest
@@ -21,7 +22,27 @@ sample_dir = Path(__file__).parent / "remove_childs_samples"
 sample_dir.mkdir(exist_ok=True)
 
 
-def has_simple_childs(node: ast.AST):
+def is_simple_node(node: Optional[ast.AST]):
+    if node is None:
+        return True
+
+    if (
+        isinstance(node, ast.Match)
+        and is_simple_node(node.subject)
+        and len(node.cases) == 1
+        and is_simple_node(node.cases[0].pattern)
+        and is_simple_node(node.cases[0].guard)
+        and isinstance(node.cases[0].body, ast.Pass)
+    ):
+        return True
+
+    if (
+        isinstance(node, ast.MatchValue)
+        and isinstance(node.value, ast.Attribute)
+        and isinstance(node.value.value, ast.Name)
+    ):
+        return True
+
     for name, field in ast.iter_fields(node):
         if (
             isinstance(field, (ast.expr, ast.stmt))
@@ -30,6 +51,34 @@ def has_simple_childs(node: ast.AST):
         ):
             return False
     return True
+
+
+def test_is_simple_node():
+    match_value = ast.MatchValue(
+        value=ast.Attribute(
+            value=ast.Name(id="name_1", ctx=ast.Load()),
+            attr="name_4",
+            ctx=ast.Load(),
+        )
+    )
+
+    node = ast.Module(
+        body=[
+            ast.Match(
+                subject=ast.Tuple(elts=[], ctx=ast.Load()),
+                cases=[
+                    ast.match_case(
+                        pattern=match_value,
+                        body=[ast.Pass()],
+                    )
+                ],
+            )
+        ],
+        type_ignores=[],
+    )
+
+    assert is_simple_node(node)
+    assert is_simple_node(match_value)
 
 
 def inner_nodes_of_type(node: ast.AST, node_type):
@@ -63,7 +112,7 @@ def try_remove_childs(source):
         new_tree = ast.parse(new_source)
 
         for node in inner_nodes_of_type(new_tree, node_type):
-            assert has_simple_childs(node)
+            assert is_simple_node(node)
 
 
 @pytest.mark.parametrize(
