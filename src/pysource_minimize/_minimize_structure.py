@@ -69,8 +69,10 @@ class MinimizeStructure(MinimizeBase):
                     self.minimize(comp)
                     return
 
+            self.minimize(node.left)
+
             self.minimize_lists(
-                (node.ops, node.comparators), (lambda _: None, self.minimize)
+                (node.ops, node.comparators), (lambda _: None, self.minimize), 1
             )
 
         elif isinstance(node, ast.Subscript):
