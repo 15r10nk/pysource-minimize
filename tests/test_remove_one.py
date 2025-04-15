@@ -64,6 +64,8 @@ def node_weights(source):
         if isinstance(node, ast.comprehension):
             # removing comrehension removes variable and iterable
             result = -1
+            if node.is_async:
+                result += 1
 
         if isinstance(node, (ast.Dict)):
             result = -len(node.keys) + 1

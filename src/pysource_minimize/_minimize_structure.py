@@ -45,8 +45,10 @@ class MinimizeStructure(MinimizeBase):
             raise TypeError(type(o))
 
     def minimize_comprehension(self, comp):
+        self.minimize(comp.target)
         self.minimize_expr(comp.iter)
         self.minimize_list(comp.ifs, terminal=self.minimize_expr)
+        self.try_attr(comp, "is_async", False)
 
     def minimize_arg(self, arg: ast.arg):
         self.minimize_optional(arg.annotation)
