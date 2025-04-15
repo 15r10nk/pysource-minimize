@@ -80,13 +80,14 @@ def try_remove_childs(source):
             new_source = pysource_minimize_testing.minimize(source, checker, retries=0)
         new_tree = ast.parse(new_source)
 
-        print("minimized source:")
-        print(new_source)
+        if 0:
+            print("minimized source:")
+            print(new_source)
 
-        if sys.version_info >= (3, 9):
-            print(ast.dump(new_tree, indent=2))
-        else:
-            print(ast.dump(new_tree))
+            if sys.version_info >= (3, 9):
+                print(ast.dump(new_tree, indent=2))
+            else:
+                print(ast.dump(new_tree))
 
         for node in inner_nodes_of_type(new_tree, node_type):
             assert is_simple_node(node)

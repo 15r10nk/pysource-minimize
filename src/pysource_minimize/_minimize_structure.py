@@ -37,7 +37,7 @@ class MinimizeStructure(MinimizeBase):
         elif isinstance(o, ast.arg):
             return self.minimize_arg(o)
         elif isinstance(o, ast.pattern):
-            pass
+            return self.minimize_pattern(o)
         elif isinstance(o, ValueWrapper):
             pass
         else:
@@ -238,47 +238,48 @@ class MinimizeStructure(MinimizeBase):
 
     if sys.version_info >= (3, 10):
 
-        def minimize_match_case(self, c: ast.match_case):
-            def minimize_pattern(pattern):
-                if isinstance(pattern, ast.MatchSequence):
-                    if len(pattern.patterns) == 1:
-                        if self.try_only(pattern, pattern.patterns[0]):
-                            return
-
-                    else:
-                        self.minimize_list(pattern.patterns, minimize_pattern)
-                elif isinstance(pattern, ast.MatchOr):
-                    self.minimize_list(pattern.patterns, minimize_pattern, 1)
-
-                elif isinstance(pattern, ast.MatchAs):
-                    if pattern.pattern:
-                        self.try_only(pattern, pattern.pattern)
-                elif isinstance(pattern, ast.MatchMapping):
-                    self.minimize_lists(
-                        (pattern.keys, pattern.patterns),
-                        (self.minimize, minimize_pattern),
-                    )
-                elif isinstance(pattern, ast.MatchClass):
-                    self.minimize(pattern.cls)
-                    self.minimize_list(pattern.patterns, minimize_pattern)
-                    self.minimize_lists((pattern.kwd_attrs, pattern.kwd_patterns))
-                elif isinstance(pattern, ast.MatchValue):
-                    if isinstance(pattern.value, ast.Attribute) and isinstance(
-                        pattern.value.value, ast.Name
-                    ):
-                        self.try_node(pattern.value, ast.Constant(0))
-                    else:
-                        self.minimize(pattern.value)
+        def minimize_pattern(self, pattern: ast.pattern):
+            if isinstance(pattern, ast.MatchSequence):
+                if len(pattern.patterns) == 1:
+                    if self.try_only(pattern, pattern.patterns[0]):
+                        return
 
                 else:
-                    assert False, "missing case"
+                    self.minimize_list(pattern.patterns)
+            elif isinstance(pattern, ast.MatchOr):
+                self.minimize_list(pattern.patterns, minimal=1)
+
+            elif isinstance(pattern, ast.MatchAs):
+                if pattern.pattern:
+                    self.try_only(pattern, pattern.pattern)
+            elif isinstance(pattern, ast.MatchMapping):
+                self.minimize_lists(
+                    (pattern.keys, pattern.patterns),
+                )
+            elif isinstance(pattern, ast.MatchClass):
+                self.minimize(pattern.cls)
+                self.minimize_list(pattern.patterns)
+                self.minimize_lists((pattern.kwd_attrs, pattern.kwd_patterns))
+            elif isinstance(pattern, ast.MatchValue):
+                if isinstance(pattern.value, ast.Attribute) and isinstance(
+                    pattern.value.value, ast.Name
+                ):
+                    self.try_node(pattern.value, ast.Constant(0))
+                else:
+                    self.minimize(pattern.value)
+            elif isinstance(pattern, ast.MatchSingleton):
+                self.try_attr(pattern, "value", None)
+            else:
+                assert False, f"missing case {pattern}"
+
+        def minimize_match_case(self, c: ast.match_case):
 
             self.minimize(c.body)
 
             if not self.try_none(c.guard):
                 self.minimize(c.guard)
 
-            minimize_pattern(c.pattern)
+            self.minimize_pattern(c.pattern)
 
     def minimize_args_of(self, func):
         args = func.args
