@@ -26,22 +26,19 @@ def is_simple_node(node: Optional[ast.AST]):
     if node is None:
         return True
 
-    if (
-        isinstance(node, ast.Match)
-        and is_simple_node(node.subject)
-        and len(node.cases) == 1
-        and is_simple_node(node.cases[0].pattern)
-        and is_simple_node(node.cases[0].guard)
-        and isinstance(node.cases[0].body, ast.Pass)
-    ):
-        return True
+    if sys.version_info >= (3, 10):
+        if (
+            isinstance(node, ast.Match)
+            and is_simple_node(node.subject)
+            and len(node.cases) == 1
+            and is_simple_node(node.cases[0].pattern)
+            and is_simple_node(node.cases[0].guard)
+            and isinstance(node.cases[0].body, ast.Pass)
+        ):
+            return True
 
-    if (
-        isinstance(node, ast.MatchValue)
-        and isinstance(node.value, ast.Attribute)
-        and isinstance(node.value.value, ast.Name)
-    ):
-        return True
+        if isinstance(node, ast.MatchValue) and isinstance(node.value, ast.Constant):
+            return True
 
     for name, field in ast.iter_fields(node):
         if (
@@ -51,34 +48,6 @@ def is_simple_node(node: Optional[ast.AST]):
         ):
             return False
     return True
-
-
-def test_is_simple_node():
-    match_value = ast.MatchValue(
-        value=ast.Attribute(
-            value=ast.Name(id="name_1", ctx=ast.Load()),
-            attr="name_4",
-            ctx=ast.Load(),
-        )
-    )
-
-    node = ast.Module(
-        body=[
-            ast.Match(
-                subject=ast.Tuple(elts=[], ctx=ast.Load()),
-                cases=[
-                    ast.match_case(
-                        pattern=match_value,
-                        body=[ast.Pass()],
-                    )
-                ],
-            )
-        ],
-        type_ignores=[],
-    )
-
-    assert is_simple_node(node)
-    assert is_simple_node(match_value)
 
 
 def inner_nodes_of_type(node: ast.AST, node_type):
@@ -110,6 +79,14 @@ def try_remove_childs(source):
         with testing_enabled():
             new_source = pysource_minimize_testing.minimize(source, checker, retries=0)
         new_tree = ast.parse(new_source)
+
+        print("minimized source:")
+        print(new_source)
+
+        if sys.version_info >= (3, 9):
+            print(ast.dump(new_tree, indent=2))
+        else:
+            print(ast.dump(new_tree))
 
         for node in inner_nodes_of_type(new_tree, node_type):
             assert is_simple_node(node)

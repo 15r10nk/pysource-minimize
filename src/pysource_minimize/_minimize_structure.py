@@ -241,7 +241,12 @@ class MinimizeStructure(MinimizeBase):
         def minimize_match_case(self, c: ast.match_case):
             def minimize_pattern(pattern):
                 if isinstance(pattern, ast.MatchSequence):
-                    self.minimize_list(pattern.patterns, minimize_pattern)
+                    if len(pattern.patterns) == 1:
+                        if self.try_only(pattern, pattern.patterns[0]):
+                            return
+
+                    else:
+                        self.minimize_list(pattern.patterns, minimize_pattern)
                 elif isinstance(pattern, ast.MatchOr):
                     self.minimize_list(pattern.patterns, minimize_pattern, 1)
 
@@ -257,6 +262,16 @@ class MinimizeStructure(MinimizeBase):
                     self.minimize(pattern.cls)
                     self.minimize_list(pattern.patterns, minimize_pattern)
                     self.minimize_lists((pattern.kwd_attrs, pattern.kwd_patterns))
+                elif isinstance(pattern, ast.MatchValue):
+                    if isinstance(pattern.value, ast.Attribute) and isinstance(
+                        pattern.value.value, ast.Name
+                    ):
+                        self.try_node(pattern.value, ast.Constant(0))
+                    else:
+                        self.minimize(pattern.value)
+
+                else:
+                    assert False, "missing case"
 
             self.minimize(c.body)
 
