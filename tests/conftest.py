@@ -1,16 +1,8 @@
 import os
-import random
-
-import pytest
 
 from . import session_config
 
 os.environ["PYSOURCE_TESTING"] = "1"
-
-
-@pytest.fixture(params=range(0))
-def seed():
-    return random.randrange(0, 100000000)
 
 
 def pytest_report_header(config):
@@ -38,7 +30,7 @@ def pytest_sessionfinish(session, exitstatus):
         from .test_needle import generate_needle
         from .test_remove_childs import generate_remove_childs
 
-        for i in range(20):
+        for i in range(4):
             if opts in ("all", "needle"):
                 generate_needle()
             if opts in ("all", "remove-one"):

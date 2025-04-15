@@ -2,6 +2,7 @@ import ast
 import sys
 
 from ._minimize_base import arguments
+from ._minimize_base import coverage_required
 from ._minimize_base import MinimizeBase
 from ._minimize_base import ValueWrapper
 
@@ -19,11 +20,7 @@ def walk_until(node, stop=()):
 
 class MinimizeStructure(MinimizeBase):
     def minimize(self, o):
-        if (
-            sys.version_info >= (3, 8)
-            and isinstance(o, (ast.expr, ast.stmt))
-            and hasattr(o, "type_comment")
-        ):
+        if isinstance(o, (ast.expr, ast.stmt)) and hasattr(o, "type_comment"):
             self.try_attr(o, "type_comment", None)
 
         if isinstance(o, ast.expr):
@@ -36,7 +33,7 @@ class MinimizeStructure(MinimizeBase):
             return self.minimize_list(o, self.minimize)
         elif isinstance(o, ast.arg):
             return self.minimize_arg(o)
-        elif isinstance(o, ast.pattern):
+        elif sys.version_info >= (3, 10) and isinstance(o, ast.pattern):
             return self.minimize_pattern(o)
         elif isinstance(o, ValueWrapper):
             pass
@@ -86,6 +83,7 @@ class MinimizeStructure(MinimizeBase):
                     if not (isinstance(v, ast.Constant) and v.value == "")
                 ]
                 if len(spec) == 1 and self.try_only(node, spec[0]):
+                    coverage_required()
                     self.minimize(spec[0])
                     return
 
@@ -119,6 +117,7 @@ class MinimizeStructure(MinimizeBase):
                     self.minimize(child)
 
         elif isinstance(node, ast.ExtSlice):
+            coverage_required()
             self.minimize_list(node.dims, minimal=1)
 
         elif isinstance(node, ast.Index):
@@ -175,11 +174,8 @@ class MinimizeStructure(MinimizeBase):
         elif isinstance(node, ast.Constant):
             pass
         elif isinstance(node, ast.Index):
+            coverage_required()
             self.minimize(node.value)
-        elif sys.version_info < (3, 8) and isinstance(
-            node, (ast.Str, ast.Bytes, ast.Num, ast.NameConstant, ast.Ellipsis)
-        ):
-            pass
         elif isinstance(node, ast.Starred):
             self.try_only_minimize(node, node.value)
         elif isinstance(node, ast.Call):
@@ -295,8 +291,7 @@ class MinimizeStructure(MinimizeBase):
                 return True
 
         all_args = []
-        if sys.version_info >= (3, 8):
-            all_args += args.posonlyargs
+        all_args += args.posonlyargs
         all_args += args.args
 
         split = len(all_args) - len(args.defaults)
@@ -433,11 +428,7 @@ class MinimizeStructure(MinimizeBase):
 
             if not self.try_node(
                 node,
-                ast.Assign(
-                    targets=[node.target],
-                    value=node.value,
-                    **(dict(type_comment="") if sys.version_info >= (3, 8) else {}),
-                ),
+                ast.Assign(targets=[node.target], value=node.value, type_comment=""),
             ):
                 self.minimize(node.target)
                 self.minimize_optional(node.value)
@@ -609,8 +600,7 @@ class MinimizeStructure(MinimizeBase):
 
         elif isinstance(node, ast.Module):
             self.minimize(node.body)
-            if sys.version_info >= (3, 8):
-                self.minimize_list(node.type_ignores, lambda e: None)
+            self.minimize_list(node.type_ignores, lambda e: None)
         elif sys.version_info >= (3, 12) and isinstance(node, ast.TypeAlias):
             if self.try_only_minimize(node, node.name, node.value):
                 return
@@ -627,6 +617,7 @@ class MinimizeStructure(MinimizeBase):
 
         if sys.version_info >= (3, 13):
             if not self.try_none(node.default_value):
+                coverage_required()
                 self.minimize(node.default_value)
 
     def minimize_lists(self, lists, terminals=None, minimal=0):

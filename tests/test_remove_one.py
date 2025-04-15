@@ -69,7 +69,7 @@ def node_weights(source):
 
         if isinstance(node, (ast.Dict)):
             result = -len(node.keys) + 1
-        if sys.version_info >= (3, 8) and isinstance(node, ast.NamedExpr):
+        if isinstance(node, ast.NamedExpr):
             result = 0
 
         if isinstance(node, ast.Constant):
