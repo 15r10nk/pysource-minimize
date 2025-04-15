@@ -25,9 +25,7 @@ def has_simple_childs(node: ast.AST):
     for name, field in ast.iter_fields(node):
         if (
             isinstance(field, (ast.expr, ast.stmt))
-            and len(
-                l := [n for n in ast.walk(field) if isinstance(n, (ast.expr, ast.stmt))]
-            )
+            and len([n for n in ast.walk(field) if isinstance(n, (ast.expr, ast.stmt))])
             > 1
         ):
             return False
@@ -65,7 +63,6 @@ def try_remove_childs(source):
         new_tree = ast.parse(new_source)
 
         for node in inner_nodes_of_type(new_tree, node_type):
-            print("check childs", node)
             assert has_simple_childs(node)
 
 

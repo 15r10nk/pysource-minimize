@@ -511,6 +511,9 @@ class MinimizeStructure(MinimizeBase):
                     self.minimize(node.exc)
                 else:
                     self.minimize_optional(node.exc)
+            else:
+                if node.exc:
+                    self.minimize(node.exc)
 
         elif isinstance(node, ast.Try) or (
             sys.version_info >= (3, 11) and isinstance(node, ast.TryStar)
