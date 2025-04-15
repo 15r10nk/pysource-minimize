@@ -32,10 +32,12 @@ def pytest_sessionfinish(session, exitstatus):
     if exitstatus == 0 and session.config.option.generate_samples:
         from .test_remove_one import generate_remove_one
         from .test_needle import generate_needle
+        from .test_remove_childs import generate_remove_childs
 
         for i in range(2):
             generate_needle()
             generate_remove_one()
+            generate_remove_childs()
 
     # teardown_stuff
 

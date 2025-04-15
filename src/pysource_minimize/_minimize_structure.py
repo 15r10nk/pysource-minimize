@@ -2,7 +2,6 @@ import ast
 import sys
 
 from ._minimize_base import arguments
-from ._minimize_base import coverage_required
 from ._minimize_base import MinimizeBase
 from ._minimize_base import ValueWrapper
 
@@ -510,7 +509,6 @@ class MinimizeStructure(MinimizeBase):
                 if self.get_ast(node).cause:
                     self.minimize(node.exc)
                 else:
-                    coverage_required()
                     self.minimize_optional(node.exc)
 
         elif isinstance(node, ast.Try) or (
