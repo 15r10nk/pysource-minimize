@@ -19,9 +19,7 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: PyPy"
 ]
 dependencies = [
-"rich >=12.6.0",
-"astunparse >=1.6.3",
-"click >=8.1.7",
+   "astunparse >=1.6.3;  python_version < '3.9'",
 ]
 description = 'minimize python source code'
 keywords = []
@@ -30,6 +28,13 @@ name = "pysource-minimize"
 readme = "README.md"
 requires-python = ">=3.8"
 version="0.7.0"
+
+[project.optional-dependencies]
+cli = [
+    "rich >=12.6.0",
+    "click >=8.1.7",
+    "black>=23.3.0",
+]
 
 
 [project.scripts]
