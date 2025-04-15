@@ -195,6 +195,7 @@ class MinimizeStructure(MinimizeBase):
                     self.minimize(e)
                     return
 
+            self.minimize(node.func)
             self.minimize(node.args)
             self.minimize_list(
                 node.keywords, terminal=lambda kw: self.minimize(kw.value)
