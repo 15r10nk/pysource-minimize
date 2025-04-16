@@ -1,16 +1,8 @@
 import os
-import random
-
-import pytest
 
 from . import session_config
 
 os.environ["PYSOURCE_TESTING"] = "1"
-
-
-@pytest.fixture(params=range(0))
-def seed():
-    return random.randrange(0, 100000000)
 
 
 def pytest_report_header(config):
@@ -21,21 +13,30 @@ def pytest_report_header(config):
 def pytest_addoption(parser, pluginmanager):
     parser.addoption(
         "--generate-samples",
-        action="store_true",
+        type=str,
+        nargs="?",
+        const="all",
+        default=None,
         help="Config file to use, defaults to %(default)s",
     )
 
 
 def pytest_sessionfinish(session, exitstatus):
-    print("exitstatus", exitstatus)
 
-    if exitstatus == 0 and session.config.option.generate_samples:
+    opts = session.config.option.generate_samples
+
+    if exitstatus == 0 and opts is not None:
         from .test_remove_one import generate_remove_one
         from .test_needle import generate_needle
+        from .test_remove_childs import generate_remove_childs
 
-        for i in range(2):
-            generate_needle()
-            generate_remove_one()
+        for i in range(4):
+            if opts in ("all", "needle"):
+                generate_needle()
+            if opts in ("all", "remove-one"):
+                generate_remove_one()
+            if opts in ("all", "remove-child"):
+                generate_remove_childs()
 
     # teardown_stuff
 

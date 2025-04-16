@@ -20,11 +20,7 @@ def walk_until(node, stop=()):
 
 class MinimizeStructure(MinimizeBase):
     def minimize(self, o):
-        if (
-            sys.version_info >= (3, 8)
-            and isinstance(o, (ast.expr, ast.stmt))
-            and hasattr(o, "type_comment")
-        ):
+        if isinstance(o, (ast.expr, ast.stmt)) and hasattr(o, "type_comment"):
             self.try_attr(o, "type_comment", None)
 
         if isinstance(o, ast.expr):
@@ -37,16 +33,18 @@ class MinimizeStructure(MinimizeBase):
             return self.minimize_list(o, self.minimize)
         elif isinstance(o, ast.arg):
             return self.minimize_arg(o)
-        elif isinstance(o, ast.pattern):
-            pass
+        elif sys.version_info >= (3, 10) and isinstance(o, ast.pattern):
+            return self.minimize_pattern(o)
         elif isinstance(o, ValueWrapper):
             pass
         else:
             raise TypeError(type(o))
 
     def minimize_comprehension(self, comp):
+        self.minimize(comp.target)
         self.minimize_expr(comp.iter)
         self.minimize_list(comp.ifs, terminal=self.minimize_expr)
+        self.try_attr(comp, "is_async", False)
 
     def minimize_arg(self, arg: ast.arg):
         self.minimize_optional(arg.annotation)
@@ -67,8 +65,10 @@ class MinimizeStructure(MinimizeBase):
                     self.minimize(comp)
                     return
 
+            self.minimize(node.left)
+
             self.minimize_lists(
-                (node.ops, node.comparators), (lambda _: None, self.minimize)
+                (node.ops, node.comparators), (lambda _: None, self.minimize), 1
             )
 
         elif isinstance(node, ast.Subscript):
@@ -83,6 +83,7 @@ class MinimizeStructure(MinimizeBase):
                     if not (isinstance(v, ast.Constant) and v.value == "")
                 ]
                 if len(spec) == 1 and self.try_only(node, spec[0]):
+                    coverage_required()
                     self.minimize(spec[0])
                     return
 
@@ -116,6 +117,7 @@ class MinimizeStructure(MinimizeBase):
                     self.minimize(child)
 
         elif isinstance(node, ast.ExtSlice):
+            coverage_required()
             self.minimize_list(node.dims, minimal=1)
 
         elif isinstance(node, ast.Index):
@@ -172,11 +174,8 @@ class MinimizeStructure(MinimizeBase):
         elif isinstance(node, ast.Constant):
             pass
         elif isinstance(node, ast.Index):
+            coverage_required()
             self.minimize(node.value)
-        elif sys.version_info < (3, 8) and isinstance(
-            node, (ast.Str, ast.Bytes, ast.Num, ast.NameConstant, ast.Ellipsis)
-        ):
-            pass
         elif isinstance(node, ast.Starred):
             self.try_only_minimize(node, node.value)
         elif isinstance(node, ast.Call):
@@ -192,6 +191,7 @@ class MinimizeStructure(MinimizeBase):
                     self.minimize(e)
                     return
 
+            self.minimize(node.func)
             self.minimize(node.args)
             self.minimize_list(
                 node.keywords, terminal=lambda kw: self.minimize(kw.value)
@@ -234,32 +234,48 @@ class MinimizeStructure(MinimizeBase):
 
     if sys.version_info >= (3, 10):
 
-        def minimize_match_case(self, c: ast.match_case):
-            def minimize_pattern(pattern):
-                if isinstance(pattern, ast.MatchSequence):
-                    self.minimize_list(pattern.patterns, minimize_pattern)
-                elif isinstance(pattern, ast.MatchOr):
-                    self.minimize_list(pattern.patterns, minimize_pattern, 1)
+        def minimize_pattern(self, pattern: ast.pattern):
+            if isinstance(pattern, ast.MatchSequence):
+                if len(pattern.patterns) == 1:
+                    if self.try_only(pattern, pattern.patterns[0]):
+                        return
 
-                elif isinstance(pattern, ast.MatchAs):
-                    if pattern.pattern:
-                        self.try_only(pattern, pattern.pattern)
-                elif isinstance(pattern, ast.MatchMapping):
-                    self.minimize_lists(
-                        (pattern.keys, pattern.patterns),
-                        (self.minimize, minimize_pattern),
-                    )
-                elif isinstance(pattern, ast.MatchClass):
-                    self.minimize(pattern.cls)
-                    self.minimize_list(pattern.patterns, minimize_pattern)
-                    self.minimize_lists((pattern.kwd_attrs, pattern.kwd_patterns))
+                else:
+                    self.minimize_list(pattern.patterns)
+            elif isinstance(pattern, ast.MatchOr):
+                self.minimize_list(pattern.patterns, minimal=1)
+
+            elif isinstance(pattern, ast.MatchAs):
+                if pattern.pattern:
+                    self.try_only(pattern, pattern.pattern)
+            elif isinstance(pattern, ast.MatchMapping):
+                self.minimize_lists(
+                    (pattern.keys, pattern.patterns),
+                )
+            elif isinstance(pattern, ast.MatchClass):
+                self.minimize(pattern.cls)
+                self.minimize_list(pattern.patterns)
+                self.minimize_lists((pattern.kwd_attrs, pattern.kwd_patterns))
+            elif isinstance(pattern, ast.MatchValue):
+                if isinstance(pattern.value, ast.Attribute) and isinstance(
+                    pattern.value.value, ast.Name
+                ):
+                    self.try_node(pattern.value, ast.Constant(0))
+                else:
+                    self.minimize(pattern.value)
+            elif isinstance(pattern, ast.MatchSingleton):
+                self.try_attr(pattern, "value", None)
+            else:
+                assert False, f"missing case {pattern}"
+
+        def minimize_match_case(self, c: ast.match_case):
 
             self.minimize(c.body)
 
             if not self.try_none(c.guard):
                 self.minimize(c.guard)
 
-            minimize_pattern(c.pattern)
+            self.minimize_pattern(c.pattern)
 
     def minimize_args_of(self, func):
         args = func.args
@@ -275,8 +291,7 @@ class MinimizeStructure(MinimizeBase):
                 return True
 
         all_args = []
-        if sys.version_info >= (3, 8):
-            all_args += args.posonlyargs
+        all_args += args.posonlyargs
         all_args += args.args
 
         split = len(all_args) - len(args.defaults)
@@ -413,11 +428,7 @@ class MinimizeStructure(MinimizeBase):
 
             if not self.try_node(
                 node,
-                ast.Assign(
-                    targets=[node.target],
-                    value=node.value,
-                    **(dict(type_comment="") if sys.version_info >= (3, 8) else {}),
-                ),
+                ast.Assign(targets=[node.target], value=node.value, type_comment=""),
             ):
                 self.minimize(node.target)
                 self.minimize_optional(node.value)
@@ -506,8 +517,10 @@ class MinimizeStructure(MinimizeBase):
                 if self.get_ast(node).cause:
                     self.minimize(node.exc)
                 else:
-                    coverage_required()
                     self.minimize_optional(node.exc)
+            else:
+                if node.exc:
+                    self.minimize(node.exc)
 
         elif isinstance(node, ast.Try) or (
             sys.version_info >= (3, 11) and isinstance(node, ast.TryStar)
@@ -587,8 +600,7 @@ class MinimizeStructure(MinimizeBase):
 
         elif isinstance(node, ast.Module):
             self.minimize(node.body)
-            if sys.version_info >= (3, 8):
-                self.minimize_list(node.type_ignores, lambda e: None)
+            self.minimize_list(node.type_ignores, lambda e: None)
         elif sys.version_info >= (3, 12) and isinstance(node, ast.TypeAlias):
             if self.try_only_minimize(node, node.name, node.value):
                 return
@@ -605,6 +617,7 @@ class MinimizeStructure(MinimizeBase):
 
         if sys.version_info >= (3, 13):
             if not self.try_none(node.default_value):
+                coverage_required()
                 self.minimize(node.default_value)
 
     def minimize_lists(self, lists, terminals=None, minimal=0):

@@ -16,6 +16,12 @@ def is_block(nodes):
     )
 
 
+if sys.version_info < (3, 13):
+    ast_const_types = (ast.Constant, ast.NameConstant)
+else:
+    ast_const_types = (ast.Constant,)
+
+
 class StopMinimization(Exception):
     pass
 
@@ -67,8 +73,7 @@ def arguments(
     args = node.args
     l = [*args.args, args.vararg, *args.kwonlyargs, args.kwarg]
 
-    if sys.version_info >= (3, 8):
-        l += args.posonlyargs
+    l += args.posonlyargs
 
     return [arg for arg in l if arg is not None]
 
@@ -238,10 +243,7 @@ class MinimizeBase:
 
                 if isinstance(node, ast.arguments):
                     assert len(node.kw_defaults) == len(node.kwonlyargs)
-                    if sys.version_info >= (3, 8):
-                        assert len(node.defaults) <= len(node.posonlyargs) + len(
-                            node.args
-                        )
+                    assert len(node.defaults) <= len(node.posonlyargs) + len(node.args)
 
         return tmp_ast
 
@@ -272,8 +274,7 @@ class MinimizeBase:
 
         for node in ast.walk(tree):
             if isinstance(node, ast.Delete) and any(
-                isinstance(target, (ast.Constant, ast.NameConstant))
-                for target in node.targets
+                isinstance(target, ast_const_types) for target in node.targets
             ):
                 # code like:
                 # delete None
