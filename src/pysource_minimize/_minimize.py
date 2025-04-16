@@ -19,13 +19,13 @@ def minimize_ast(
     retries=1,
 ) -> ast.AST:
     """
-    minimzes the AST
+    minimizes the AST
 
     Args:
         ast: the ast to minimize
-        checker: a function which gets the ast and returns `True` when the criteria is fullfilled.
+        checker: a function which gets the ast and returns `True` when the criteria is fulfilled.
         progress_callback: function which is called everytime the ast gets a bit smaller.
-        retries: the number of retries which sould be performed when the ast could be minimized (useful for non deterministic issues)
+        retries: the number of retries which should be performed when the ast could be minimized (useful for non deterministic issues)
 
     returns the minimized ast
     """
@@ -67,14 +67,14 @@ def minimize(
     compilable=True,
 ) -> str:
     """
-    minimzes the source code
+    minimizes the source code
 
     Args:
         source: the source code to minimize
-        checker: a function which gets the source and returns `True` when the criteria is fullfilled.
+        checker: a function which gets the source and returns `True` when the criteria is fulfilled.
         progress_callback: function which is called everytime the source gets a bit smaller.
-        retries: the number of retries which sould be performed when the ast could be minimized (useful for non deterministic issues)
-        compilable: make shure that the minimized code can also be compiled and not just parsed.
+        retries: the number of retries which should be performed when the ast could be minimized (useful for non deterministic issues)
+        compilable: make sure that the minimized code can also be compiled and not just parsed.
 
     returns the minimized source
     """

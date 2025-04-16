@@ -636,11 +636,11 @@ class MinimizeStructure(MinimizeBase):
             nonlocal max_remove
 
             if max_remove < len(l) or not try_without(l):
-                devide(l)
+                divide(l)
             else:
                 max_remove -= len(l)
 
-        def devide(l):
+        def divide(l):
             nonlocal max_remove, remaining
             if not l:
                 return
@@ -659,7 +659,7 @@ class MinimizeStructure(MinimizeBase):
                 wo(l[:mid])
 
         remaining = []
-        devide(lists)
+        divide(lists)
 
         for nodes in remaining:
             for terminal, node in zip(terminals, nodes):
@@ -681,11 +681,11 @@ class MinimizeStructure(MinimizeBase):
             nonlocal max_remove
 
             if max_remove < len(l) or not self.try_without(l):
-                devide(l)
+                divide(l)
             else:
                 max_remove -= len(l)
 
-        def devide(l):
+        def divide(l):
             nonlocal max_remove, remaining
             if not l:
                 return
@@ -704,7 +704,7 @@ class MinimizeStructure(MinimizeBase):
                 wo(l[:mid])
 
         remaining = []
-        devide(stmts)
+        divide(stmts)
 
         for node in remaining:
             terminal(node)

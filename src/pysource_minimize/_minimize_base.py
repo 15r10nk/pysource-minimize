@@ -261,7 +261,7 @@ class MinimizeBase:
 
     def try_with(self, replaced={}):
         """
-        returns True if the minimization was successfull
+        returns True if the minimization was successful
         """
 
         if TESTING and not self.allow_multiple_mappings:
@@ -308,8 +308,8 @@ class MinimizeBase:
             return True
         return self.try_with({node.__index: None})
 
-    def try_only(self, node, *childs) -> bool:
-        for child in childs:
+    def try_only(self, node, *children) -> bool:
+        for child in children:
             if isinstance(child, list):
                 if self.try_with({node.__index: [c.__index for c in child]}):
                     return True
@@ -320,15 +320,15 @@ class MinimizeBase:
                     return True
         return False
 
-    def try_only_minimize(self, node, *childs):
-        childs = [child for child in childs if child is not None]
+    def try_only_minimize(self, node, *children):
+        children = [child for child in children if child is not None]
 
-        for child in childs:
+        for child in children:
             if self.try_only(node, child):
                 self.minimize(child)
                 return True
 
-        for child in childs:
+        for child in children:
             self.minimize(child)
         return False
 

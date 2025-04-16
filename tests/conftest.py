@@ -28,7 +28,7 @@ def pytest_sessionfinish(session, exitstatus):
     if exitstatus == 0 and opts is not None:
         from .test_remove_one import generate_remove_one
         from .test_needle import generate_needle
-        from .test_remove_childs import generate_remove_childs
+        from .test_remove_children import generate_remove_children
 
         for i in range(4):
             if opts in ("all", "needle"):
@@ -36,7 +36,7 @@ def pytest_sessionfinish(session, exitstatus):
             if opts in ("all", "remove-one"):
                 generate_remove_one()
             if opts in ("all", "remove-child"):
-                generate_remove_childs()
+                generate_remove_children()
 
     # teardown_stuff
 

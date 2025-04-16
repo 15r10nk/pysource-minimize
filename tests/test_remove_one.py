@@ -112,7 +112,7 @@ def node_weights(source):
 
         # try
         if sys.version_info >= (3, 11) and isinstance(node, ast.TryStar):
-            # execpt*: is invalid syntax
+            # except*: is invalid syntax
             result = -len(node.handlers) + 1
 
         if isinstance(node, ast.excepthandler):

@@ -17,7 +17,7 @@ try:
 except ImportError:
     import pysource_minimize as pysource_minimize_testing
 
-sample_dir = Path(__file__).parent / "remove_childs_samples"
+sample_dir = Path(__file__).parent / "remove_children_samples"
 
 sample_dir.mkdir(exist_ok=True)
 
@@ -51,21 +51,21 @@ def is_simple_node(node: Optional[ast.AST]):
 
 
 def inner_nodes_of_type(node: ast.AST, node_type):
-    childs = []
+    children = []
     for child in ast.iter_child_nodes(node):
-        childs += inner_nodes_of_type(child, node_type)
+        children += inner_nodes_of_type(child, node_type)
 
-    if not childs and isinstance(node, node_type):
-        childs.append(node)
+    if not children and isinstance(node, node_type):
+        children.append(node)
 
-    return childs
+    return children
 
 
 def node_types(node: ast.AST):
     return {type(n) for n in ast.walk(node)}
 
 
-def try_remove_childs(source):
+def try_remove_children(source):
     tree = ast.parse(source)
 
     for node_type in node_types(tree):
@@ -114,21 +114,21 @@ def test_samples(file):
     else:
         print(ast.dump(ast.parse(source)))
 
-    try_remove_childs(source)
+    try_remove_children(source)
 
 
-def generate_remove_childs():
+def generate_remove_children():
     seed = random.randrange(0, 100000000)
 
     source = generate(seed, node_limit=1000, depth_limit=6)
 
     try:
-        try_remove_childs(source)
+        try_remove_children(source)
     except:
 
         def checker(source):
             try:
-                try_remove_childs(source)
+                try_remove_children(source)
             except Exception as e:
                 return True
 

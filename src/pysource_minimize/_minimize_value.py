@@ -71,9 +71,9 @@ class MinimizeValue(MinimizeBase):
                 elif len(l) == 1:
                     return l
                 else:
-                    return devide(before, l, after)
+                    return divide(before, l, after)
 
-            def devide(before, l, after):
+            def divide(before, l, after):
                 if not l:
                     return []
 
@@ -84,4 +84,4 @@ class MinimizeValue(MinimizeBase):
                 b = without(before + a, b, after)
                 return a + b
 
-            devide([], list(constant.value), [])
+            divide([], list(constant.value), [])
