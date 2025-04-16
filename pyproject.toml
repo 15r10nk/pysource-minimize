@@ -27,7 +27,7 @@ license = "MIT"
 name = "pysource-minimize"
 readme = "README.md"
 requires-python = ">=3.8"
-version="0.7.0"
+version="0.8.0"
 
 [project.optional-dependencies]
 cli = [
@@ -59,12 +59,27 @@ version_files = [
 ]
 version_provider = "pep621"
 
+[tool.hatch.envs.release]
+detached=true
+dependencies=[
+    "commitizen"
+]
+
+[tool.hatch.envs.release.scripts]
+create=[
+    "cz bump",
+    "git push --force-with-lease origin main $(git describe main --tags)",
+]
+
 [tool.hatch.envs.hatch-test]
 extra-dependencies = [
 "pysource-codegen>=0.4.1",
   "inline-snapshot",
   "pytest-xdist[psutil] >=3.1.0",
 ]
+
+
+
 [[tool.hatch.envs.hatch-test.matrix]]
 python=['3.8',"3.9","3.10","3.11","3.12","3.13"]
 

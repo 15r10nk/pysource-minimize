@@ -1,3 +1,22 @@
+## v0.8.0 (2025-04-16)
+
+### Feat
+
+- new cli with visual feedback
+
+### Fix
+
+- minimize MatchValue.value
+- minimize Raise.exc
+- minimize Call.func
+- also minimize left side of an assertion
+- improved comprehesion minimization
+- NamedConstant has been removed in 3.14
+
+### Refactor
+
+- improved pattern minimization
+
 ## v0.7.0 (2024-10-09)
 
 ### Feat
