@@ -19,9 +19,7 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: PyPy"
 ]
 dependencies = [
-"rich >=12.6.0",
-"astunparse >=1.6.3",
-"click >=8.1.7",
+   "astunparse >=1.6.3;  python_version < '3.9'",
 ]
 description = 'minimize python source code'
 keywords = []
@@ -30,6 +28,13 @@ name = "pysource-minimize"
 readme = "README.md"
 requires-python = ">=3.8"
 version="0.7.0"
+
+[project.optional-dependencies]
+cli = [
+    "rich >=12.6.0",
+    "click >=8.1.7",
+    "black>=23.3.0",
+]
 
 
 [project.scripts]
@@ -64,12 +69,12 @@ extra-dependencies = [
 python=['3.8',"3.9","3.10","3.11","3.12","3.13"]
 
 
-[[tool.hatch.envs.mypy.matrix]]
+[[tool.hatch.envs.types.matrix]]
 python=['3.8',"3.10","3.11","3.12","3.13"]
 
-[tool.hatch.envs.mypy]
-extra-dependencies=["mypy"]
-scripts.test = ["mypy src"]
+[tool.hatch.envs.types]
+extra-dependencies=["mypy","pysource-minimize[cli]"]
+scripts.check = ["mypy src"]
 
 [tool.hatch.envs.docs]
 dependencies = [
