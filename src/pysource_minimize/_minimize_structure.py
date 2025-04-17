@@ -420,7 +420,13 @@ class MinimizeStructure(MinimizeBase):
             self.try_only_minimize(node, node.value, node.targets)
 
         elif isinstance(node, ast.AugAssign):
-            self.try_only_minimize(node, node.target, node.value)
+            if self.try_node(node, ast.Assign(targets=[node.target], value=node.value)):
+                return
+            if self.try_only(node, node.target, node.value):
+                self.minimize(node.target)
+                self.minimize(node.value)
+                return
+            self.try_node(node.target, ast.Name(id="name", ctx=ast.Store()))
 
         elif isinstance(node, ast.AnnAssign):
             for child in [node.target, node.value, node.annotation]:
