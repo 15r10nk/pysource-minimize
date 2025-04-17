@@ -24,6 +24,8 @@ class MinimizeStructure(MinimizeBase):
             self.try_attr(o, "type_comment", None)
 
         if isinstance(o, ast.expr):
+            if self.try_node(o, ast.Constant(value=0, kind=None)):
+                return
             return self.minimize_expr(o)
         elif isinstance(o, ast.stmt):
             return self.minimize_stmt(o)
