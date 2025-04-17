@@ -127,6 +127,9 @@ def node_weights(source):
         if hasattr(node, "type_comment") and node.type_comment is not None:
             result += 1
 
+        if isinstance(node, ast.AnnAssign) and node.simple != 1:
+            result += 1
+
         return result
 
     return [(n, weight(n)) for n in ast.walk(tree)]
