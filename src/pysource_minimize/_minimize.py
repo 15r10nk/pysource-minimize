@@ -6,6 +6,7 @@ from collections.abc import Callable
 
 from ._minimize_base import equal_ast
 from ._minimize_structure import MinimizeStructure
+from ._minimize_unique_name import MinimizeUniqueName
 from ._minimize_value import MinimizeValue
 from ._utils import parse
 from ._utils import unparse
@@ -36,7 +37,7 @@ def minimize_ast(
     while last_success <= retries:
         new_ast = current_ast
 
-        for Minimizer in (MinimizeStructure, MinimizeValue):
+        for Minimizer in (MinimizeStructure, MinimizeValue, MinimizeUniqueName):
             minimizer = Minimizer(new_ast, checker, progress_callback)
             new_ast = minimizer.get_current_tree({})
             if minimizer.stop:

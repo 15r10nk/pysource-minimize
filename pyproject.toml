@@ -101,3 +101,7 @@ scripts.serve = ["mkdocs serve {args}"]
 
 [tool.hatch.version]
 path = "src/pysource_minimize/__init__.py"
+
+[tool.scriv]
+format = "md"
+version = "command: cz bump --get-next"

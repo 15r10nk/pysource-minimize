@@ -123,6 +123,8 @@ class MinimizeBase:
 
         self.replaced = {}
 
+        self.start(self.original_ast)
+
         try:
             if not self.checker(self.get_ast(self.original_ast)):
                 raise ValueError("checker return False: nothing to minimize here")
@@ -130,6 +132,9 @@ class MinimizeBase:
             self.minimize_stmt(self.original_ast)
         except StopMinimization:
             self.stop = True
+
+    def start(self, ast: ast.AST):
+        pass
 
     def index_of(self, node):
         return node.__index
