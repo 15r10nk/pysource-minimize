@@ -456,7 +456,6 @@ class MinimizeStructure(MinimizeBase):
                 self.minimize(node.annotation)
 
             if node.simple != 1:
-                coverage_required()
                 self.try_attr(node, "simple", 1)
 
         elif isinstance(node, (ast.For, ast.AsyncFor)):
