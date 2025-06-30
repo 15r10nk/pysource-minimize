@@ -25,6 +25,8 @@ def pytest_sessionfinish(session, exitstatus):
 
     opts = session.config.option.generate_samples
 
+    assert opts in (None, "all", "needle", "remove-one", "remove-children")
+
     if exitstatus == 0 and opts is not None:
         from .test_remove_one import generate_remove_one
         from .test_needle import generate_needle
@@ -35,7 +37,7 @@ def pytest_sessionfinish(session, exitstatus):
                 generate_needle()
             if opts in ("all", "remove-one"):
                 generate_remove_one()
-            if opts in ("all", "remove-child"):
+            if opts in ("all", "remove-children"):
                 generate_remove_children()
 
     # teardown_stuff
