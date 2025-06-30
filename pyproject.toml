@@ -73,6 +73,7 @@ create=[
 
 [tool.hatch.envs.hatch-test]
 extra-dependencies = [
+  "pysource-minimize[cli]",
 "pysource-codegen>=0.4.1",
   "inline-snapshot",
   "pytest-xdist[psutil] >=3.1.0",

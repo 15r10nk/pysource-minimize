@@ -11,12 +11,15 @@ try:
     from rich.syntax import Syntax
     from rich.prompt import Confirm
     from rich.layout import Layout
+    from rich.panel import Panel
+    from rich.align import Align
+    from rich.markdown import Markdown
 except ModuleNotFoundError:
     print("pysource-minimize can only be used if you installed pysource-minimize[cli]")
     exit(1)
 
 
-from ._minimize import minimize
+from ._minimize import minimize_all
 
 
 def num_equal_lines(a: str, b: str):
@@ -36,9 +39,24 @@ def num_equal_lines(a: str, b: str):
     return start, end
 
 
+def escape_markdown(s: str) -> str:
+    return s.replace("_", "\\_")
+
+
 @click.command()
 @click.option(
-    "--file", required=True, type=click.Path(exists=True), help="file to minimize"
+    "files",
+    "--file",
+    multiple=True,
+    type=click.Path(exists=True),
+    help="file to minimize",
+)
+@click.option(
+    "dirs",
+    "--dir",
+    multiple=True,
+    type=click.Path(exists=True),
+    help="directory that is recursively searched for .py files",
 )
 @click.option(
     "--track",
@@ -56,101 +74,164 @@ def num_equal_lines(a: str, b: str):
     help="format the file with black to provide better output for complex files",
 )
 @click.argument("cmd", nargs=-1)
-def main(cmd, file, track, write_back, format):
-    file = pathlib.Path(file)
+def main(cmd, files, dirs, track, write_back, format):
+    if not files and not dirs:
+        print("either --dir or --file is required")
+        exit(1)
 
-    first_result = sp.run(cmd, capture_output=True)
+    files = [pathlib.Path(f) for f in files]
 
-    if track not in (first_result.stdout.decode() + first_result.stderr.decode()):
-        print("I dont know what you want to minimize for.")
+    for directory in dirs:
+        files += list(pathlib.Path(directory).rglob("*.py"))
+
+    def is_on_track():
+        result = sp.run(cmd, capture_output=True)
+        return track in (result.stdout.decode() + result.stderr.decode())
+
+    if not is_on_track():
+        print("I don't know what you want to minimize for.")
         print(
             f"'{track}' is not a string which in the stdout/stderr of '{' '.join(cmd)}'"
         )
         sys.exit(1)
 
-    original_source = file.read_text()
+    original_sources = {f: f.read_text(encoding="utf-8") for f in files}
     console = Console()
-    syntax = Syntax(original_source, "python", line_numbers=True)
+    syntax = Syntax(list(original_sources.values())[0], "python", line_numbers=True)
+
+    syntax_panel = Panel(syntax, title_align="left")
 
     check_count = 0
 
-    last_minimized_code = ""
+    last_minimized_sources = {}
 
     def refresh():
         live.refresh()
 
-    def checker(source):
-        nonlocal last_minimized_code
-        nonlocal check_count
+    def safe(path, source):
+        if source is None:
+            path.unlink(missing_ok=True)
+        else:
+            path.write_text(source, encoding="utf-8")
 
-        info = ""
+        import shutil
+
+        cache = path.parent / "__pycache__"
+        if cache.exists():
+            shutil.rmtree(cache)
+
+    def format_source(source):
+        if source is None:
+            return source, True
         formatted = False
         if format:
             try:
                 source = format_str(
-                    source, mode=FileMode(line_length=console.size.width - 5)
+                    source,
+                    mode=FileMode(line_length=console.size.width - 5),
                 )
                 formatted = True
-            except:
+            except:  # pragma: no cover
+                pass
+
+        return source, formatted
+
+    def checker(sources, filename):
+        nonlocal last_minimized_sources
+        nonlocal check_count
+
+        info = ""
+        formatted = False
+        display_source = ""
+        for path, current_source in sources.items():
+            current_source, current_source_formatted = format_source(current_source)
+
+            if not current_source_formatted and format:
                 info = "(formatting failed)"
 
-        file.write_text(source)
+            if path == filename:
+                formatted = current_source_formatted
+                display_source = current_source
 
-        result = sp.run(cmd, capture_output=True)
+            safe(path, current_source)
+
+        on_track = is_on_track()
+
         check_count += 1
         layout["info"].update(f"test {check_count} {info}")
+        syntax_panel.title = str(filename)
 
-        equal_lines_start, equal_lines_end = num_equal_lines(
-            last_minimized_code, source
-        )
-        num_lines = len(last_minimized_code.splitlines())
-        start_line = equal_lines_start - 2 if num_lines > console.size.height - 2 else 0
+        last_minimized_source = last_minimized_sources.get(filename, "")
+        current_source = sources[filename]
 
-        if track not in (result.stdout.decode() + result.stderr.decode()):
+        if current_source is None:
+            syntax.code = f"<deleted>"
+            live.refresh()
 
-            num_lines = len(last_minimized_code.splitlines())
+        else:
+            assert last_minimized_source is not None
+
+            equal_lines_start, equal_lines_end = num_equal_lines(
+                last_minimized_source, current_source
+            )
+            num_lines = len(last_minimized_source.splitlines())
+            start_line = (
+                equal_lines_start - 2 if num_lines > console.size.height - 2 else 0
+            )
+
+            if not on_track:
+
+                num_lines = len(last_minimized_source.splitlines())
+
+                syntax.highlight_lines = {
+                    n
+                    for n in range(
+                        equal_lines_start + 1, num_lines - equal_lines_end + 1
+                    )
+                }
+
+                syntax.line_range = (start_line, None)
+
+                live.refresh()
+
+            if sources == last_minimized_sources:
+                return True
+
+            syntax.word_wrap = formatted
+
+            original_source = original_sources[filename]
+            progress.update(
+                task,
+                completed=len(original_source) - len(current_source),
+                total=len(original_source),
+            )
 
             syntax.highlight_lines = {
                 n for n in range(equal_lines_start + 1, num_lines - equal_lines_end + 1)
             }
 
-            syntax.line_range = (start_line, None)
+            if syntax.line_range is None or start_line != syntax.line_range[0]:
+                syntax.line_range = (start_line, None)
+                refresh()
 
-            live.refresh()
+            syntax.code = display_source
 
-            return False
+            num_lines = len(current_source.splitlines())
 
-        if source == last_minimized_code:
-            return True
+            syntax.highlight_lines = {
+                n for n in range(equal_lines_start + 1, num_lines - equal_lines_end + 1)
+            }
 
-        syntax.word_wrap = formatted
-
-        progress.update(
-            task,
-            completed=len(original_source) - len(source),
-            total=len(original_source),
-        )
-
-        syntax.highlight_lines = {
-            n for n in range(equal_lines_start + 1, num_lines - equal_lines_end + 1)
-        }
-
-        if syntax.line_range is None or start_line != syntax.line_range[0]:
-            syntax.line_range = (start_line, None)
             refresh()
 
-        syntax.code = source
+        if on_track:
+            last_minimized_sources = sources
+        return on_track
 
-        num_lines = len(source.splitlines())
-
-        syntax.highlight_lines = {
-            n for n in range(equal_lines_start + 1, num_lines - equal_lines_end + 1)
-        }
-
-        refresh()
-
-        last_minimized_code = source
-        return True
+    sponsoring_notification = Align(
+        "You can support my work by sponsoring me on GitHub [blue link=https://github.com/sponsors/15r10nk][red]:heart:[/red] github.com/sponsors/15r10nk [/]",
+        align="center",
+    )
 
     progress = Progress()
     layout = Layout()
@@ -158,27 +239,80 @@ def main(cmd, file, track, write_back, format):
         Layout(name="progress", size=1),
         Layout(name="info", size=1),
         Layout(name="code"),
+        Layout(
+            sponsoring_notification,
+            size=1,
+        ),
     )
+
     layout["progress"].update(progress)
-    layout["code"].update(syntax)
+    layout["code"].update(syntax_panel)
     layout["info"].update("start testing ...")
 
     with Live(layout, auto_refresh=False, screen=True) as live:
         task = progress.add_task("minimize")
 
-        new_source = minimize(original_source, checker, retries=2)
+        try:
+            new_sources = minimize_all(original_sources, checker, retries=1)
+        except KeyboardInterrupt:
+            for path, original_source in original_sources.items():
+                path.write_text(original_source, encoding="utf-8")
+            return 1
+
+    console.print(sponsoring_notification)
+    console.print()
+
+    deleted_files = [key for key, value in new_sources.items() if value is None]
+
+    if deleted_files:
+        print(
+            f"These files are deleted as they are not necessary to reproduce the problem"
+        )
+        if len(deleted_files) >= 10:
+            deleted_files = [
+                *deleted_files[:3],
+                f"... {len(deleted_files)-6} other files",
+                *deleted_files[-3:],
+            ]
+
+        markdown = "\n".join(f" * {escape_markdown(str(f))}" for f in deleted_files)
+        console.print(Markdown(markdown))
 
     console.print()
     console.print("The minimized code is:")
-    console.print(Syntax(new_source, "python", line_numbers=True, word_wrap=True))
-    console.print()
+    for path, new_source in new_sources.items():
+        if new_source is not None:
+            new_source, _ = format_source(new_source)
+            console.print(
+                Panel(
+                    Syntax(new_source, "python", line_numbers=True, word_wrap=True),
+                    title=str(path),
+                    title_align="left",
+                )
+            )
+            console.print()
 
-    if write_back or Confirm.ask(
-        f"do you want to write the minimized code to {file}?", default=False
+    console.print(
+        "Please [blue link=https://github.com/15r10nk/pysource-minimize/issues]report[/] if your code can be further simplified. This will help pysource-minimize to improve further.\n"
+    )
+
+    if (
+        write_back
+        or console.is_terminal
+        and Confirm.ask(
+            f"Do you want to write the minimized code to the filesystem?", default=False
+        )
     ):
-        file.write_text(new_source)
+        for path, new_source in new_sources.items():
+            new_source, _ = format_source(new_source)
+            safe(path, new_source)
+
+        console.print("minimized files saved")
     else:
-        file.write_text(original_source)
+        for path, original_source in original_sources.items():
+            path.write_text(original_source, encoding="utf-8")
+
+        console.print("original files restored")
 
 
 if __name__ == "__main__":
