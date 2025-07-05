@@ -7,4 +7,4 @@ from ._minimize_base import StopMinimization
 __all__ = ("minimize", "minimize_all", "CouldNotMinimize", "StopMinimization")
 
 
-version = "0.8.0"
+version = "0.9.0"

@@ -1,3 +1,17 @@
+## v0.9.0 (2025-07-05)
+
+### Feat
+
+- implemented minimize_all()
+- better minimization for ast.AnnAssign
+- better minimization for ast.AugAssign
+- try to replace every ast.expr with ast.Constant(0)
+- replace names with unique_name_N if possible to show where a common name matters
+
+### Refactor
+
+- fixed typos
+
 ## v0.8.0 (2025-04-16)
 
 ### Feat
