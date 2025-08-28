@@ -88,6 +88,13 @@ def node_weights(source):
             # work around for https://github.com/python/cpython/issues/110309
             result = -(sum(isinstance(n, ast.Constant) for n in node.values))
 
+        if sys.version_info >= (3, 14):
+            if isinstance(node, ast.Interpolation):
+                result = 0
+            if isinstance(node, ast.TemplateStr):
+                # work around for https://github.com/python/cpython/issues/110309
+                result = -(sum(isinstance(n, ast.Constant) for n in node.values))
+
         if isinstance(node, ast.IfExp):
             result = -1
         if isinstance(node, ast.Subscript):

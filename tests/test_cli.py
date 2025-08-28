@@ -53,7 +53,7 @@ def minimize_files(
             print("\n".join(format_tb(result.exc_info[2])))
             print(result.exception)
 
-        output = re.sub("'/.*python", "'python", result.output)
+        output = re.sub("'/.*python3?", "'python", result.output)
 
         assert output == expected_output
 
@@ -192,7 +192,7 @@ print("aaaa")
         expected_output=snapshot(
             """\
 I don't know what you want to minimize for.
-'bbbb' is not a string which in the stdout/stderr of 'python3 bug.py'
+'bbbb' is not a string which in the stdout/stderr of 'python bug.py'
 """
         ),
         expected_files=snapshot("<unchanged>"),
