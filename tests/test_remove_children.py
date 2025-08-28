@@ -22,9 +22,28 @@ sample_dir = Path(__file__).parent / "remove_children_samples"
 sample_dir.mkdir(exist_ok=True)
 
 
+def is_trivial_node(node):
+    """
+    trivial nodes are:
+    * nodes without ast-nodes as children or
+    * none nodes at all
+    """
+    if not isinstance(node, (ast.expr, ast.stmt)):
+        return True
+    return (
+        sum(isinstance(n, (ast.expr, ast.stmt)) for n in ast.iter_child_nodes(node))
+        == 0
+    )
+
+
+EXCEPTIONS = {ast.AnnAssign: {"target": ast.Subscript}}
+
+
 def is_simple_node(node: Optional[ast.AST]):
     if node is None:
         return True
+
+    assert not isinstance(node, list)
 
     if sys.version_info >= (3, 10):
         if (
@@ -41,12 +60,14 @@ def is_simple_node(node: Optional[ast.AST]):
             return True
 
     for name, field in ast.iter_fields(node):
-        if (
-            isinstance(field, (ast.expr, ast.stmt))
-            and len([n for n in ast.walk(field) if isinstance(n, (ast.expr, ast.stmt))])
-            > 1
-        ):
-            return False
+        exceptions = EXCEPTIONS.get(type(node), [])
+        if name in exceptions and isinstance(field, exceptions[name]):
+            if not is_simple_node(field):
+                return False
+        else:
+            if not is_trivial_node(field):
+                return False
+
     return True
 
 
