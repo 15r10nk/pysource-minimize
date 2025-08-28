@@ -36,7 +36,8 @@ def is_trivial_node(node):
     )
 
 
-EXCEPTIONS = {ast.AnnAssign: {"target": ast.Subscript}}
+# EXCEPTIONS = {ast.AnnAssign: {"target": ast.Subscript}}
+EXCEPTIONS = {}
 
 
 def is_simple_node(node: Optional[ast.AST]):

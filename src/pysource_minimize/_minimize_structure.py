@@ -74,6 +74,10 @@ class MinimizeStructure(MinimizeBase):
             )
 
         elif isinstance(node, ast.Subscript):
+            if isinstance(node.ctx, ast.Store):
+                if self.try_node(node, ast.Name(id="new_name", ctx=ast.Store())):
+                    return
+
             self.try_only_minimize(node, node.value, node.slice)
 
         elif isinstance(node, ast.FormattedValue):
