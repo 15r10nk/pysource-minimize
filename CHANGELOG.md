@@ -1,3 +1,13 @@
+## v0.10.0 (2025-08-29)
+
+### Feat
+
+- **3.14**: added support for template-strings
+
+### Fix
+
+- try to minimize Subscript to Name in Store context
+
 ## v0.9.0 (2025-07-05)
 
 ### Feat
