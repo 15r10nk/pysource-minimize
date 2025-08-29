@@ -74,6 +74,10 @@ class MinimizeStructure(MinimizeBase):
             )
 
         elif isinstance(node, ast.Subscript):
+            if isinstance(node.ctx, ast.Store):
+                if self.try_node(node, ast.Name(id="new_name", ctx=ast.Store())):
+                    return
+
             self.try_only_minimize(node, node.value, node.slice)
 
         elif isinstance(node, ast.FormattedValue):
@@ -227,6 +231,41 @@ class MinimizeStructure(MinimizeBase):
 
         elif isinstance(node, ast.NamedExpr):
             self.try_only_minimize(node, node.target, node.value)
+
+        elif isinstance(node, ast.Interpolation):
+            if isinstance(node.format_spec, ast.JoinedStr):
+                # work around for https://github.com/python/cpython/issues/110309
+                spec = [
+                    v
+                    for v in node.format_spec.values
+                    if not (isinstance(v, ast.Constant) and v.value == "")
+                ]
+                if len(spec) == 1 and self.try_only(node, spec[0]):
+                    coverage_required()
+                    self.minimize(spec[0])
+                    return
+
+            if not self.try_none(node.format_spec):
+                self.minimize(node.format_spec)
+
+            self.minimize_expr(node.value)
+
+        elif isinstance(node, ast.TemplateStr):
+            for v in node.values:
+                if isinstance(v, ast.Interpolation) and self.try_only(node, v.value):
+                    self.minimize(v.value)
+                    return
+                if (
+                    isinstance(v, ast.Interpolation)
+                    and v.format_spec
+                    and self.try_only(node, v.format_spec)
+                ):
+                    self.minimize(v.format_spec)
+                    return
+
+            self.minimize(node.values)
+            # todo minimize values
+
         else:
             assert False, "expression is not handled %s" % (node)
 

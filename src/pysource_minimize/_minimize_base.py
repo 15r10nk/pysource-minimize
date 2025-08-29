@@ -115,6 +115,7 @@ class MinimizeBase:
                     ("Nonlocal", "names"),
                     ("Global", "names"),
                     ("MatchClass", "kwd_attrs"),
+                    ("Dict", "keys"),
                 ]:
                     setattr(node, name, wrap(value))
 
