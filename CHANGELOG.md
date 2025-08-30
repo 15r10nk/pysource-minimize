@@ -1,3 +1,9 @@
+## v0.10.1 (2025-08-30)
+
+### Fix
+
+- set Interpolation.str to the unparsed value
+
 ## v0.10.0 (2025-08-29)
 
 ### Feat
