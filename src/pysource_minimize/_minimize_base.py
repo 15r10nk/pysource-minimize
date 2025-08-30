@@ -16,6 +16,12 @@ def is_block(nodes):
     )
 
 
+def walk_children_first(node):
+    for e in ast.iter_child_nodes(node):
+        yield from walk_children_first(e)
+        yield e
+
+
 if sys.version_info < (3, 13):
     ast_const_types = (ast.Constant, ast.NameConstant)
 else:
@@ -259,6 +265,23 @@ class MinimizeBase:
     def get_current_tree(self, replaced):
         tree = self.get_ast(self.original_ast, replaced)
         ast.fix_missing_locations(tree)
+
+        if sys.version_info >= (3, 14):
+            for n in walk_children_first(tree):
+                if isinstance(n, ast.Interpolation):
+                    f_str = ast.JoinedStr(
+                        [
+                            ast.FormattedValue(
+                                value=n.value, conversion=-1, format_spec=None
+                            )
+                        ]
+                    )
+                    f_str_repr = ast.unparse(f_str)
+                    if f_str_repr.startswith(("f'''", 'f"""')):
+                        n.str = ast.unparse(f_str)[5:-4]  # strip f"""{...}"""
+                    else:
+                        n.str = ast.unparse(f_str)[3:-2]  # strip f"{...}"
+
         return tree
 
     @staticmethod
