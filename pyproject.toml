@@ -59,18 +59,6 @@ version_files = [
 ]
 version_provider = "pep621"
 
-[tool.hatch.envs.release]
-detached=true
-dependencies=[
-    "commitizen"
-]
-
-[tool.hatch.envs.release.scripts]
-create=[
-    "cz bump",
-    "git push --force-with-lease origin main $(git describe main --tags)",
-]
-
 [tool.hatch.envs.hatch-test]
 extra-dependencies = [
   "pysource-minimize[cli]",
