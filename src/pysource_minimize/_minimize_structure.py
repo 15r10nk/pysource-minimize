@@ -382,6 +382,10 @@ class MinimizeStructure(MinimizeBase):
             self.minimize_list(node.type_params, self.minimize_type_param)
 
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if isinstance(node, ast.AsyncFunctionDef):
+                if self.try_node(node, ast.FunctionDef(**vars(node))):
+                    return
+
             if self.try_only_minimize(node, node.decorator_list):
                 return
 
