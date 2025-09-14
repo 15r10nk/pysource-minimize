@@ -160,15 +160,23 @@ The worst that can happen here is that *pysource-minimize* finds another example
 
 </details>
 
+<!--[[[cog
+import requests,cog
+
+url = "https://raw.githubusercontent.com/15r10nk/sponsors/refs/heads/main/sponsors_readme.md"
+response = requests.get(url)
+response.raise_for_status()  # Raise an exception for bad status codes
+cog.out(response.text)
+]]]-->
 ## Sponsors
 
 I would like to thank my sponsors. Without them, I would not be able to invest so much time in my projects.
-If you want, you can also support my work.
 
-### Bronze sponsor 🥉
+### Silver sponsor 🥈
 
 <p align="center">
   <a href="https://pydantic.dev/logfire">
-    <img src="https://pydantic.dev/assets/for-external/pydantic_logfire_logo_endorsed_lithium_rgb.svg" alt="pydantic logfire" width="300"/>
+    <img src="https://pydantic.dev/assets/for-external/pydantic_logfire_logo_endorsed_lithium_rgb.svg" alt="logfire" width="300"/>
   </a>
 </p>
+<!--[[[end]]]-->
