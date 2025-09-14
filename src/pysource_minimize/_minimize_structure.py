@@ -221,6 +221,18 @@ class MinimizeStructure(MinimizeBase):
                         return
 
             if isinstance(node, ast.DictComp):
+                if self.try_node(node, ast.Dict(keys=[node.key], values=[node.value])):
+                    return
+
+            if isinstance(node, ast.ListComp):
+                if self.try_node(node, ast.List(elts=[node.elt], ctx=ast.Load())):
+                    return
+
+            if isinstance(node, ast.SetComp):
+                if self.try_node(node, ast.Set(elts=[node.elt])):
+                    return
+
+            if isinstance(node, ast.DictComp):
                 if self.try_only_minimize(node, node.key, node.value):
                     return
             else:
@@ -247,6 +259,12 @@ class MinimizeStructure(MinimizeBase):
 
             if not self.try_none(node.format_spec):
                 self.minimize(node.format_spec)
+
+            for n in (-1, 97, 114, 115):
+                if node.conversion == n:
+                    break
+                if self.try_attr(node, "conversion", n):
+                    break
 
             self.minimize_expr(node.value)
 
@@ -382,6 +400,10 @@ class MinimizeStructure(MinimizeBase):
             self.minimize_list(node.type_params, self.minimize_type_param)
 
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if isinstance(node, ast.AsyncFunctionDef):
+                if self.try_node(node, ast.FunctionDef(**vars(node))):
+                    return
+
             if self.try_only_minimize(node, node.decorator_list):
                 return
 
