@@ -260,6 +260,12 @@ class MinimizeStructure(MinimizeBase):
             if not self.try_none(node.format_spec):
                 self.minimize(node.format_spec)
 
+            for n in (-1, 97, 114, 115):
+                if node.conversion == n:
+                    break
+                if self.try_attr(node, "conversion", n):
+                    break
+
             self.minimize_expr(node.value)
 
         elif isinstance(node, ast.TemplateStr):
