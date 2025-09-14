@@ -221,6 +221,18 @@ class MinimizeStructure(MinimizeBase):
                         return
 
             if isinstance(node, ast.DictComp):
+                if self.try_node(node, ast.Dict(keys=[node.key], values=[node.value])):
+                    return
+
+            if isinstance(node, ast.ListComp):
+                if self.try_node(node, ast.List(elts=[node.elt], ctx=ast.Load())):
+                    return
+
+            if isinstance(node, ast.SetComp):
+                if self.try_node(node, ast.Set(elts=[node.elt])):
+                    return
+
+            if isinstance(node, ast.DictComp):
                 if self.try_only_minimize(node, node.key, node.value):
                     return
             else:
