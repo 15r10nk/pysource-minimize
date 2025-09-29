@@ -90,7 +90,6 @@ This example minimizes multiple files and searches for sets which have 2 common 
 ...         and all(isinstance(s, set) for s in sets)
 ...         and len(set.intersection(*sets)) >= 2
 ...     )
-...
 >>> pprint(minimize_all(sources, checker=check))
 {PosixPath('a.py'): None,
  PosixPath('b.py'): 'l = {81894, 0}',
@@ -151,7 +150,6 @@ The worst that can happen here is that *pysource-minimize* finds another example
 ...         and len(result := set.intersection(*sets)) >= 2
 ...         and 0 not in result
 ...     )
-...
 >>> pprint(minimize_all(sources, checker=check))
 {PosixPath('a.py'): None,
  PosixPath('b.py'): 'l = {81894, 89218}',
