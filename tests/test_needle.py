@@ -21,7 +21,6 @@ except ImportError:
 from pysource_minimize import minimize
 from pysource_minimize._minimize import unparse
 
-
 sample_dir = Path(__file__).parent / "needle_samples"
 
 sample_dir.mkdir(exist_ok=True)
