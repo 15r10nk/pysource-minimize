@@ -87,8 +87,7 @@ d={0:1,5:8}
         files,
         track="KeyError",
         minimize=["bug.py", "var_a.py"],
-        expected_output=snapshot(
-            """\
+        expected_output=snapshot("""\
 You can support my work by sponsoring me on GitHub ❤ github.com/sponsors/15r10nk
 
 
@@ -107,8 +106,7 @@ Please report if your code can be further simplified. This will help \n\
 pysource-minimize to improve further.
 
 original files restored
-"""
-        ),
+"""),
         expected_files=snapshot("<unchanged>"),
     )
 
@@ -126,8 +124,7 @@ print("sum",sum(l))
         files,
         track="sum 100",
         extra_args=["--format", "-w"],
-        expected_output=snapshot(
-            """\
+        expected_output=snapshot("""\
 You can support my work by sponsoring me on GitHub ❤ github.com/sponsors/15r10nk
 
 
@@ -154,11 +151,8 @@ Please report if your code can be further simplified. This will help \n\
 pysource-minimize to improve further.
 
 minimized files saved
-"""
-        ),
-        expected_files=snapshot(
-            {
-                "bug.py": """\
+"""),
+        expected_files=snapshot({"bug.py": """\
 very_long_name = 10
 l = [
     very_long_name,
@@ -173,9 +167,7 @@ l = [
     very_long_name,
 ]
 print("sum", sum(l))
-"""
-            }
-        ),
+"""}),
     )
 
 
@@ -189,12 +181,10 @@ print("aaaa")
     minimize_files(
         files,
         track="bbbb",
-        expected_output=snapshot(
-            """\
+        expected_output=snapshot("""\
 I don't know what you want to minimize for.
 'bbbb' is not a string which in the stdout/stderr of 'python bug.py'
-"""
-        ),
+"""),
         expected_files=snapshot("<unchanged>"),
     )
 

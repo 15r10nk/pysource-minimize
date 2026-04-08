@@ -7,19 +7,13 @@ from pysource_minimize._minimize import minimize_all
 
 def test_minimize_all():
     files = {
-        Path(
-            "bug1.py"
-        ): """\
+        Path("bug1.py"): """\
 a=1+2+3
 """,
-        Path(
-            "bug2.py"
-        ): """\
+        Path("bug2.py"): """\
 print(d[a],"b")
 """,
-        Path(
-            "bug3.py"
-        ): """\
+        Path("bug3.py"): """\
 x=2
 """,
     }
