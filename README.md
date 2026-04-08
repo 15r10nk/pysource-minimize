@@ -55,19 +55,13 @@ This example minimizes multiple files and searches for sets which have 2 common 
 >>> from pprint import pprint
 >>> from pysource_minimize._minimize import minimize_all
 >>> sources = {
-...     Path(
-...         "a.py"
-...     ): """\
+...     Path("a.py"): """\
 ... l={1,81894,9874,89228,897985,897498,9879,9898}
 ...     """,
-...     Path(
-...         "b.py"
-...     ): """\
+...     Path("b.py"): """\
 ... l={5,81894,9274,89218,897985,897298,9879,9898}
 ...     """,
-...     Path(
-...         "c.py"
-...     ): """\
+...     Path("c.py"): """\
 ... l={0,81894,9874,89218,897985,897498,9879,9298}
 ...     """,
 ... }
@@ -115,19 +109,13 @@ The worst that can happen here is that *pysource-minimize* finds another example
 >>> from pprint import pprint
 >>> from pysource_minimize._minimize import minimize_all
 >>> sources = {
-...     Path(
-...         "a.py"
-...     ): """\
+...     Path("a.py"): """\
 ... l={1,81894,9874,89228,897985,897498,9879,9898}
 ...     """,
-...     Path(
-...         "b.py"
-...     ): """\
+...     Path("b.py"): """\
 ... l={5,81894,9274,89218,897985,897298,9879,9898}
 ...     """,
-...     Path(
-...         "c.py"
-...     ): """\
+...     Path("c.py"): """\
 ... l={0,81894,9874,89218,897985,897498,9879,9298}
 ...     """,
 ... }
@@ -180,3 +168,7 @@ I would like to thank my sponsors. Without them, I would not be able to invest s
   </a>
 </p>
 <!--[[[end]]]-->
+
+## Similar projects
+
+* [shrinkray](https://github.com/DRMacIver/shrinkray) which can not only minimize python code but C, C++, JSON and Dimacs too.
