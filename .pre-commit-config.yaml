@@ -22,7 +22,7 @@ repos:
     - --ignore-init-module-imports
     id: autoflake
   repo: https://github.com/myint/autoflake
-  rev: v2.3.3
+  rev: v2.4.0
 
 - repo: https://github.com/asottile/reorder-python-imports
   rev: v3.17.0
@@ -61,7 +61,7 @@ repos:
     stages:
     - commit-msg
   repo: https://github.com/commitizen-tools/commitizen
-  rev: v4.16.5
+  rev: v4.18.1
 
 - repo: https://github.com/crate-ci/typos
   rev: v1
