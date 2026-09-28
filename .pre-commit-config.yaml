@@ -61,9 +61,9 @@ repos:
     stages:
     - commit-msg
   repo: https://github.com/commitizen-tools/commitizen
-  rev: v4.18.1
+  rev: v4.19.0
 
 - repo: https://github.com/crate-ci/typos
-  rev: v1
+  rev: v1.50.3
   hooks:
   - id: typos
