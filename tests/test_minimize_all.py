@@ -1,5 +1,4 @@
 from pathlib import Path
-from pathlib import PosixPath
 
 from inline_snapshot import snapshot
 from pysource_minimize._minimize import minimize_all
@@ -33,9 +32,9 @@ x=2
     assert minimize_all(files, check) == (
         snapshot(
             {
-                PosixPath("bug1.py"): "a = 1",
-                PosixPath("bug2.py"): "d[a]",
-                PosixPath("bug3.py"): None,
+                Path("bug1.py"): "a = 1",
+                Path("bug2.py"): "d[a]",
+                Path("bug3.py"): None,
             }
         )
     )
