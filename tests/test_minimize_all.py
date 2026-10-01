@@ -1,7 +1,9 @@
 from pathlib import Path
 from pathlib import PosixPath
 
+import pytest
 from inline_snapshot import snapshot
+from pysource_minimize import CouldNotMinimize
 from pysource_minimize._minimize import minimize_all
 
 
@@ -39,3 +41,13 @@ x=2
             }
         )
     )
+
+
+def test_minimize_all_raises_when_checker_stops_reproducing():
+    reproductions = iter((True, False))
+
+    def checker(sources, current_file):
+        return sources[current_file] is not None and next(reproductions)
+
+    with pytest.raises(CouldNotMinimize):
+        minimize_all({Path("bug.py"): "x = 1"}, checker)
