@@ -1,6 +1,17 @@
 exclude: tests/.*_samples
 
+ci:
+  autofix_pr: false
+  autoupdate_commit_msg: 'style: pre-commit autoupdate'
+  autofix_commit_msg: 'style: pre-commit fixed styling'
+  autoupdate_schedule: monthly
+
 repos:
+
+- repo: https://github.com/15r10nk/project-template
+  rev: v0.4.3
+  hooks:
+  - id: copier-enforce
 - hooks:
   - id: check-yaml
   - id: check-ast
@@ -28,11 +39,11 @@ repos:
   rev: v3.17.0
   hooks:
   - args:
-    - --py37-plus
+    - --py38-plus
     id: reorder-python-imports
 - hooks:
   - args:
-    - --py37-plus
+    - --py38-plus
     id: pyupgrade
   repo: https://github.com/asottile/pyupgrade
   rev: v3.21.2
@@ -63,7 +74,22 @@ repos:
   repo: https://github.com/commitizen-tools/commitizen
   rev: v4.18.1
 
+- repo: https://github.com/abravalheri/validate-pyproject
+  rev: v0.24.1
+  hooks:
+  - id: validate-pyproject
+
+- repo: https://github.com/henryiii/validate-pyproject-schema-store
+  rev: 2025.04.28
+  hooks:
+  - id: validate-pyproject
+
+- repo: https://github.com/rhysd/actionlint
+  rev: v1.7.7
+  hooks:
+  - id: actionlint
+
 - repo: https://github.com/crate-ci/typos
-  rev: v1
+  rev: v1.47.0
   hooks:
   - id: typos

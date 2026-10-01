@@ -1,6 +1,10 @@
 # Changes here will be overwritten by Copier
-_commit: v0.0.5
+_commit: v0.4.3
 _src_path: git@github.com:15r10nk/project-template.git
+author_email: 15r10nk@polarbit.de
+author_name: Frank Hoffmann
+discord_id: ''
+discord_invite_id: ''
 full_coverage: false
 github_user: 15r10nk
 insider_only: false
@@ -8,6 +12,8 @@ module_name: pysource_minimize
 project_description: minimize python source code
 project_main: true
 project_name: pysource-minimize
+pypy_versions:
+- pypy3.11
 python_versions:
 - '3.8'
 - '3.9'
@@ -15,5 +21,7 @@ python_versions:
 - '3.11'
 - '3.12'
 - '3.13'
+- '3.14'
 show_project_logo: false
+test_lowest_deps: false
 use_mkdocs: false
