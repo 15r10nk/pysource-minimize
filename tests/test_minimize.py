@@ -1,12 +1,31 @@
 from unittest.mock import Mock
 
 import pytest
-from pysource_minimize import CouldNotMinimize
+from inline_snapshot import snapshot
+from inline_snapshot.extra import raises
 from pysource_minimize import minimize
 
 
-@pytest.mark.parametrize("first_check_result", [False, True])
-def test_minimize_raises_when_checker_stops_reproducing(first_check_result):
+@pytest.mark.parametrize(
+    "first_check_result, expected_error",
+    [
+        (
+            False,
+            snapshot(
+                "CouldNotMinimize: Source code cannot be minimized: the error failed to reproduce after roundtripping the source using `ast.parse()` and `ast.unparse()`"
+            ),
+        ),
+        (
+            True,
+            snapshot(
+                "CouldNotMinimize: checker return False: nothing to minimize here"
+            ),
+        ),
+    ],
+)
+def test_minimize_raises_when_checker_stops_reproducing(
+    first_check_result, expected_error
+):
     """Test the exception raised if a callback stops reproducing on the original source.
 
     For example, a callback checking for a timeout might return `True` if
@@ -16,7 +35,7 @@ def test_minimize_raises_when_checker_stops_reproducing(first_check_result):
     """
     checker = Mock(side_effect=[first_check_result, False])
 
-    with pytest.raises(CouldNotMinimize):
+    with raises(expected_error):
         minimize("x = 1", checker)
 
     assert checker.call_count == (2 if first_check_result else 1)
