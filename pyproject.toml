@@ -98,3 +98,18 @@ path = "src/pysource_minimize/__init__.py"
 [tool.scriv]
 format = "md"
 version = "command: cz bump --get-next"
+
+[tool.uv.sources]
+pysource-minimize = { workspace = true }
+pysource-codegen = { workspace = true }
+
+
+
+
+[dependency-groups]
+dev = [
+    "inline-snapshot[black]>=0.31.1",
+    "pysource-codegen>=0.4.1",
+    "pysource-minimize[cli]",
+    "rich>=14.3.4",
+]

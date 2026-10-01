@@ -111,7 +111,7 @@ class MinimizeStructure(MinimizeBase):
                     self.minimize(v.format_spec)
                     return
 
-            self.minimize(node.values)
+            self.minimize_list(node.values, terminal=self.minimize_joined_str_value)
             # todo minimize values
 
         elif isinstance(node, ast.Slice):
@@ -281,11 +281,19 @@ class MinimizeStructure(MinimizeBase):
                     self.minimize(v.format_spec)
                     return
 
-            self.minimize(node.values)
+            self.minimize_list(node.values, terminal=self.minimize_template_str_value)
             # todo minimize values
 
         else:
             assert False, "expression is not handled %s" % (node)
+
+    def minimize_joined_str_value(self, node):
+        if isinstance(node, ast.FormattedValue):
+            self.minimize_expr(node)
+
+    def minimize_template_str_value(self, node):
+        if isinstance(node, ast.Interpolation):
+            self.minimize_expr(node)
 
     def minimize_optional(self, node):
         if not self.try_none(node):
@@ -401,7 +409,12 @@ class MinimizeStructure(MinimizeBase):
 
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             if isinstance(node, ast.AsyncFunctionDef):
-                if self.try_node(node, ast.FunctionDef(**vars(node))):
+                if self.try_node(
+                    node,
+                    ast.FunctionDef(
+                        **{k: v for k, v in vars(node).items() if k[0] != "_"}
+                    ),
+                ):
                     return
 
             if self.try_only_minimize(node, node.decorator_list):
