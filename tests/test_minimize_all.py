@@ -44,6 +44,13 @@ x=2
 
 
 def test_minimize_all_raises_when_checker_stops_reproducing():
+    """Test the exception raised if a callback stops reproducing on the original source.
+
+    For example, a callback checking for a timeout might return `True` only when
+    running the files exceeds its time limit. If their runtime is close to that
+    limit, varying execution time can make the next check return False for the same
+    files.
+    """
     reproductions = iter((True, False))
 
     def checker(sources, current_file):
