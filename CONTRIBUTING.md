@@ -12,3 +12,8 @@ The code can be tested with [hatch](https://hatch.pypa.io/latest/)
 
 # Commits
 Please use [pre-commit](https://pre-commit.com/) for your commits.
+
+# Changelog
+Add a changelog fragment for user-visible changes with
+`uv run scriv create --add --edit`. The fragments are collected automatically
+when the release pull request is created.

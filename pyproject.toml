@@ -15,6 +15,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy"
 ]
@@ -36,6 +37,23 @@ cli = [
     "black>=23.3.0",
 ]
 
+[dependency-groups]
+cog = [
+  "cogapp>=3.4.1",
+  "lxml",
+  "requests",
+]
+dev = [
+  "pysource-minimize[cli]",
+  "pysource-codegen>=0.4.1",
+  "inline-snapshot",
+  "pytest",
+  "pytest-xdist[psutil]>=3.1.0",
+  "commitizen==4.16.5; python_version >= '3.10'",
+  "scriv==1.8.0; python_version >= '3.10'",
+]
+
+
 
 [project.scripts]
 pysource-minimize = "pysource_minimize.__main__:main"
@@ -46,32 +64,89 @@ Documentation = "https://github.com/15r10nk/pysource-minimize#readme"
 Issues = "https://github.com/15r10nk/pysource-minimize/issues"
 Source = "https://github.com/15r10nk/pysource-minimize"
 
+[tool.mypy]
+# Sample inputs include deliberately invalid type comments.
+exclude = ["^tests/.*_samples/"]
+
+[[tool.mypy.overrides]]
+# Preserve the existing source-only type-checking policy.
+module = ["tests.*"]
+ignore_errors = true
+
 [tool.black]
 target-version = ["py38"]
 
 [tool.commitizen]
-changelog_incremental = true
 major_version_zero = true
 tag_format = "v$major.$minor.$patch$prerelease"
-update_changelog_on_bump = true
-version_files = [
-  "src/pysource_minimize/__init__.py:version"
-]
+version_scheme = "semver2"
 version_provider = "pep621"
+version_files = ["src/pysource_minimize/__init__.py:version"]
+
+[tool.scriv]
+format = "md"
+
+[tool.coverage.paths]
+pysource_minimize = ["src/pysource_minimize", "*/pysource-minimize/src/pysource_minimize"]
+tests = ["tests", "*/pysource-minimize/tests"]
+
+
+
+[tool.coverage.report]
+exclude_lines = ["pragma: no cover", "assert False", "raise NotImplemented", "\\.\\.\\."]
+
+[tool.coverage.run]
+source = ["pysource_minimize"]
+branch = true
+data_file = "$TOP/.coverage"
+omit = [
+  "src/pysource_minimize/__about__.py"
+]
+parallel = true
+
+[tool.hatch.envs.default]
+features = ["cli"]
+scripts.test = "pytest {args:tests}"
+dependencies = [
+  "pysource-codegen>=0.4.1",
+  "inline-snapshot",
+  "pytest",
+  "pytest-xdist"
+]
 
 [tool.hatch.envs.hatch-test]
 extra-dependencies = [
   "pysource-minimize[cli]",
-"pysource-codegen>=0.4.1",
+  "pysource-codegen>=0.4.1",
   "inline-snapshot",
-  "pytest-xdist[psutil] >=3.1.0",
+  "pytest-xdist[psutil]>=3.1.0",
 ]
-
-
+dependencies = [
+  "coverage[toml]>=6.5",
+  "coverage-enable-subprocess",
+  "pytest",
+  "pytest-xdist"
+]
+env-vars.TOP = "{root}"
+default-args = ["tests"]
+scripts.run = "coverage run -m pytest {args}"
 
 [[tool.hatch.envs.hatch-test.matrix]]
-python=['3.8',"3.9","3.10","3.11","3.12","3.13"]
+python = ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
 
+
+
+[tool.hatch.envs.cov]
+dependencies = ["coverage[toml]>=6.5"]
+detached = true
+env-vars.TOP = "{root}"
+scripts.test = [
+  "- coverage erase",
+  "hatch test --cover-quiet {args}",
+  "coverage combine",
+  "coverage html",
+  "coverage report "
+]
 
 [[tool.hatch.envs.types.matrix]]
 python=['3.8',"3.9","3.10","3.11","3.12","3.13"]
@@ -94,7 +169,3 @@ scripts.serve = ["mkdocs serve {args}"]
 
 [tool.hatch.version]
 path = "src/pysource_minimize/__init__.py"
-
-[tool.scriv]
-format = "md"
-version = "command: cz bump --get-next"
