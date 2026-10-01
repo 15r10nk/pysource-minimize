@@ -40,9 +40,17 @@ def minimize_ast(
     current_ast = original_ast
     while last_success <= retries:
         new_ast = current_ast
+        last_reproducing_ast = current_ast
 
-        for Minimizer in default_strategies:
-            minimizer = Minimizer(new_ast, checker, progress_callback)
+        for Minimizer in strategies:
+            try:
+                minimizer = Minimizer(new_ast, checker, progress_callback)
+            except ValueError as e:
+                if str(e) != "checker return False: nothing to minimize here":
+                    raise
+                new_ast = last_reproducing_ast
+                break
+            last_reproducing_ast = new_ast
             new_ast = minimizer.get_current_tree({})
             if minimizer.stop:
                 break
