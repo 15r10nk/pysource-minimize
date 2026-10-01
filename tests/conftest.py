@@ -39,35 +39,3 @@ def pytest_sessionfinish(session, exitstatus):
                 generate_remove_one()
             if opts in ("all", "remove-children"):
                 generate_remove_children()
-
-    # teardown_stuff
-
-
-from contextlib import contextmanager
-
-depth = 0
-
-
-@contextmanager
-def ctx(msg):
-    global depth
-    print("│" * depth + "┌", msg)
-    depth += 1
-    try:
-        yield
-    finally:
-        depth -= 1
-        print("│" * depth + "└", msg)
-
-
-import textwrap
-
-
-def ctx_print(*a):
-    s = " ".join(str(e) for e in a)
-    prefix = "│" * (depth)
-    print(textwrap.indent(s, prefix, lambda line: True))
-
-
-__builtins__["ctx"] = ctx
-__builtins__["ctx_print"] = ctx_print
