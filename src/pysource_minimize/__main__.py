@@ -184,10 +184,7 @@ def main(cmd, files, dirs, track, write_back, format):
                 num_lines = len(last_minimized_source.splitlines())
 
                 syntax.highlight_lines = {
-                    n
-                    for n in range(
-                        equal_lines_start + 1, num_lines - equal_lines_end + 1
-                    )
+                    *range(equal_lines_start + 1, num_lines - equal_lines_end + 1)
                 }
 
                 syntax.line_range = (start_line, None)
@@ -207,7 +204,7 @@ def main(cmd, files, dirs, track, write_back, format):
             )
 
             syntax.highlight_lines = {
-                n for n in range(equal_lines_start + 1, num_lines - equal_lines_end + 1)
+                *range(equal_lines_start + 1, num_lines - equal_lines_end + 1)
             }
 
             if syntax.line_range is None or start_line != syntax.line_range[0]:
@@ -219,7 +216,7 @@ def main(cmd, files, dirs, track, write_back, format):
             num_lines = len(current_source.splitlines())
 
             syntax.highlight_lines = {
-                n for n in range(equal_lines_start + 1, num_lines - equal_lines_end + 1)
+                *range(equal_lines_start + 1, num_lines - equal_lines_end + 1)
             }
 
             refresh()
