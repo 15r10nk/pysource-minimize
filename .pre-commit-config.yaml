@@ -25,7 +25,7 @@ repos:
   rev: v2.4.0
 
 - repo: https://github.com/asottile/reorder-python-imports
-  rev: v3.17.0
+  rev: v3.19.0
   hooks:
   - args:
     - --py37-plus
@@ -35,11 +35,11 @@ repos:
     - --py37-plus
     id: pyupgrade
   repo: https://github.com/asottile/pyupgrade
-  rev: v3.21.2
+  rev: v3.22.0
 - hooks:
   - id: black
   repo: https://github.com/psf/black
-  rev: 26.5.1
+  rev: 26.10.1
 - hooks:
   - id: blacken-docs
   repo: https://github.com/asottile/blacken-docs
@@ -61,9 +61,9 @@ repos:
     stages:
     - commit-msg
   repo: https://github.com/commitizen-tools/commitizen
-  rev: v4.18.1
+  rev: v4.19.3
 
 - repo: https://github.com/crate-ci/typos
-  rev: v1
+  rev: v1.51.1
   hooks:
   - id: typos
