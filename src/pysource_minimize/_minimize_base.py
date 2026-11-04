@@ -27,6 +27,10 @@ else:
     ast_const_types = (ast.Constant,)
 
 
+class CouldNotMinimize(ValueError):
+    """Raised to indicate that the source code could not be minimized."""
+
+
 class StopMinimization(Exception):
     pass
 
@@ -133,7 +137,7 @@ class MinimizeBase:
 
         try:
             if not self.checker(self.get_ast(self.original_ast)):
-                raise ValueError("checker return False: nothing to minimize here")
+                raise CouldNotMinimize("checker return False: nothing to minimize here")
 
             self.minimize_stmt(self.original_ast)
         except StopMinimization:

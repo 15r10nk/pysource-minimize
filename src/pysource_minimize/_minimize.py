@@ -5,6 +5,7 @@ import warnings
 from collections.abc import Callable
 from pathlib import Path
 
+from ._minimize_base import CouldNotMinimize
 from ._minimize_base import equal_ast
 from ._minimize_structure import MinimizeStructure
 from ._minimize_unique_name import MinimizeUniqueName
@@ -57,10 +58,6 @@ def minimize_ast(
             last_success += 1
 
     return current_ast
-
-
-class CouldNotMinimize(ValueError):
-    """Raised to indicate that the source code could not be minimized."""
 
 
 def _minimize_source(
