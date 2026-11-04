@@ -192,11 +192,28 @@ jobs:
       id-token: write
 
     steps:
+    - name: Create GitHub App token
+      id: app-token
+      uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+      with:
+        client-id: ${{vars.RELEASE_APP_CLIENT_ID}}
+        private-key: ${{secrets.RELEASE_APP_PRIVATE_KEY}}
+        permission-contents: write
+
     - name: Checkout tested commit
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         fetch-depth: 0
-        token: ${{secrets.PAT_WEEKLY_UPDATE}}
+        token: ${{steps.app-token.outputs.token}}
+
+    - name: Check release tag does not exist
+      env:
+        TAG: ${{needs.detect_release.outputs.tag}}
+      run: |
+        if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+          echo "::error::Release tag $TAG already exists"
+          exit 1
+        fi
 
     - uses: ./.github/actions/setup
       with:
@@ -205,23 +222,17 @@ jobs:
     - name: Build distributions
       run: uvx hatch build
 
-    - name: Tag tested commit
+    - name: Publish package distributions to PyPI
+      uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
+
+    - name: Tag and push tested commit
       env:
         TAG: ${{needs.detect_release.outputs.tag}}
       run: |
         git config user.name github-actions[bot]
         git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-        if git rev-parse "$TAG" >/dev/null 2>&1; then
-          test "$(git rev-list -n 1 "$TAG")" = "$GITHUB_SHA"
-        else
-          git tag --annotate "$TAG" --message "Release $TAG"
-          git push origin "$TAG"
-        fi
-
-    - name: Publish package distributions to PyPI
-      uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # v1.12.4
-      with:
-        skip-existing: true
+        git tag --annotate "$TAG" --message "Release $TAG"
+        git push origin "$TAG"
 
     - name: Create GitHub release
       env:
