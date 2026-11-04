@@ -1,7 +1,14 @@
+<!-- -8<- [start:Header] -->
+
+
+![ci](https://github.com/15r10nk/pysource-minimize/actions/workflows/ci.yml/badge.svg?branch=main)
+
 [![pypi version](https://img.shields.io/pypi/v/pysource-minimize.svg)](https://pypi.org/project/pysource-minimize/)
 ![Python Versions](https://img.shields.io/pypi/pyversions/pysource-minimize)
-![PyPI - Downloads](https://img.shields.io/pypi/dw/pysource-minimize)
+[![PyPI - Downloads](https://img.shields.io/pypi/dw/pysource-minimize)](https://pypacktrends.com/?packages=pysource-minimize&time_range=2years)
 [![GitHub Sponsors](https://img.shields.io/github/sponsors/15r10nk)](https://github.com/sponsors/15r10nk)
+
+<!-- -8<- [end:Header] -->
 
 # pysource-minimize
 

@@ -1,6 +1,5 @@
-import os
-import re
 import sys
+from functools import partial
 from pathlib import Path
 from traceback import format_tb
 from typing import List
@@ -10,6 +9,21 @@ import pytest
 from click.testing import CliRunner
 from inline_snapshot import snapshot
 from pysource_minimize.__main__ import main
+from rich.console import Console
+
+
+@pytest.fixture(autouse=True)
+def consistent_console(monkeypatch):
+    monkeypatch.setattr(
+        "pysource_minimize.__main__.Console",
+        partial(
+            Console,
+            width=80,
+            legacy_windows=False,
+            force_terminal=False,
+            color_system=None,
+        ),
+    )
 
 
 def minimize_files(
@@ -35,8 +49,6 @@ def minimize_files(
         for name, source in files.items():
             Path(name).write_text(source)
 
-        os.environ["COLUMNS"] = "80"
-
         result = runner.invoke(
             main,
             [
@@ -53,7 +65,7 @@ def minimize_files(
             print("\n".join(format_tb(result.exc_info[2])))
             print(result.exception)
 
-        output = re.sub("'/.*python3?", "'python", result.output)
+        output = result.output.replace(sys.executable, "python")
 
         assert output == expected_output
 

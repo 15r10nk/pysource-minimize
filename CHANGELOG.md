@@ -1,22 +1,22 @@
-## v0.10.1 (2025-08-30)
+# v0.10.1 (2025-08-30)
 
-### Fix
+## Fix
 
 - set Interpolation.str to the unparsed value
 
-## v0.10.0 (2025-08-29)
+# v0.10.0 (2025-08-29)
 
-### Feat
+## Feat
 
 - **3.14**: added support for template-strings
 
-### Fix
+## Fix
 
 - try to minimize Subscript to Name in Store context
 
-## v0.9.0 (2025-07-05)
+# v0.9.0 (2025-07-05)
 
-### Feat
+## Feat
 
 - implemented minimize_all()
 - better minimization for ast.AnnAssign
@@ -24,17 +24,17 @@
 - try to replace every ast.expr with ast.Constant(0)
 - replace names with unique_name_N if possible to show where a common name matters
 
-### Refactor
+## Refactor
 
 - fixed typos
 
-## v0.8.0 (2025-04-16)
+# v0.8.0 (2025-04-16)
 
-### Feat
+## Feat
 
 - new cli with visual feedback
 
-### Fix
+## Fix
 
 - minimize MatchValue.value
 - minimize Raise.exc
@@ -43,39 +43,39 @@
 - improved comprehesion minimization
 - NamedConstant has been removed in 3.14
 
-### Refactor
+## Refactor
 
 - improved pattern minimization
 
-## v0.7.0 (2024-10-09)
+# v0.7.0 (2024-10-09)
 
-### Feat
+## Feat
 
 - added compilable flag
 
-### Fix
+## Fix
 
 - unified handling of type_params
 - minimize default_value of type_params
 
-## v0.6.3 (2024-04-23)
+# v0.6.3 (2024-04-23)
 
-### Fix
+## Fix
 - Improve error reporting when source cannot be minimized (#16)
 - Complete type hints for public API (#15)
 
-## v0.6.2 (2024-03-25)
+# v0.6.2 (2024-03-25)
 
-### Fix
+## Fix
 
 - minimize (yield) to None
 - minimization of MatchClass
 - minimization of default arguments
 - minimize slice correctly
 
-## v0.6.1 (2023-11-29)
+# v0.6.1 (2023-11-29)
 
-### Fix
+## Fix
 
 - minimize every type comment
 - **3.8**: support for Index and ExtSlice
@@ -83,19 +83,19 @@
 - ignore code in async inner scopes when we try to minimize a function to its body
 - correct minimization of optional nodes
 
-### Refactor
+## Refactor
 
 - extracted parse function
 
-## v0.6.0 (2023-11-12)
+# v0.6.0 (2023-11-12)
 
-### Feat
+## Feat
 
 - removed python 3.7 support
 - minimize strings and bytes
 - minimize int, float, boolean values
 
-### Fix
+## Fix
 
 - fix crash when minimizing raise statements
 - minimize nonlocal and global names
@@ -105,25 +105,25 @@
 - added py.typed
 - minimize type comments
 
-### Refactor
+## Refactor
 
 - created MinimizeStructure
 - created MinimizeBase
 - implemented ValueWrapper
 
-## v0.5.0 (2023-10-20)
+# v0.5.0 (2023-10-20)
 
-### Feat
+## Feat
 
 - support for 3.12
 
-### Fix
+## Fix
 
 - fixed various bugs
 
-## v0.4.0 (2023-09-21)
+# v0.4.0 (2023-09-21)
 
-### Feat
+## Feat
 
 - implemented cli
 - support for python 3.7 - 3.11

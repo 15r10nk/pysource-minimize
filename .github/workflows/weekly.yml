@@ -1,0 +1,54 @@
+name: Weekly Cog Update
+
+on:
+  schedule:
+  - cron: 0 8 * * 5      # Every Friday at 08:00 UTC
+  workflow_dispatch:
+
+jobs:
+  weekly-update:
+    permissions:
+      contents: write
+      pull-requests: write
+
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+      with:
+        python-version: '3.12'
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+
+    - name: Run cog update
+      run: |
+        git ls-files -z -- '*.py' '*.md' | xargs -0 -r uv run --group cog cog -r
+        uvx gha-update
+        uvx pre-commit run --all-files || uvx pre-commit run --all-files
+
+    - name: Create GitHub App token
+      id: app-token
+      uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+      with:
+        client-id: ${{vars.RELEASE_APP_CLIENT_ID}}
+        private-key: ${{secrets.RELEASE_APP_PRIVATE_KEY}}
+        permission-contents: write
+        permission-pull-requests: write
+        permission-workflows: write
+
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+      with:
+        token: ${{steps.app-token.outputs.token}}
+        commit-message: 'chore: weekly cog update'
+        title: 'chore: weekly update'
+        body: Automated weekly update via scheduled workflow.
+        branch: chore/weekly-update
+        delete-branch: true
+        reviewers: 15r10nk
