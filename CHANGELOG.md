@@ -1,3 +1,16 @@
+
+<a id='changelog-0.11.0'></a>
+# 0.11.0 — 2026-11-06
+
+## Added
+
+- Minimize list, set, and dictionary comprehensions to list, set, and dictionary literals when the checker still reproduces the failure.
+- Minimize asynchronous functions to synchronous functions when the checker still reproduces the failure.
+- Simplify or remove interpolation conversions (`!a`, `!r`, and `!s`) in Python 3.14 template strings.
+
+## Fixed
+
+- Consistently raise `CouldNotMinimize` instead of a plain `ValueError` when the checker stops reproducing the failure during `minimize()` or `minimize_all()`.
 # v0.10.1 (2025-08-30)
 
 ## Fix
